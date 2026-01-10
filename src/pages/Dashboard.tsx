@@ -1,0 +1,13 @@
+import { useAuth } from '@/contexts/AuthContext';
+import AdminDashboard from './AdminDashboard';
+import StaffDashboard from './StaffDashboard';
+
+export default function Dashboard() {
+  const { user } = useAuth();
+
+  if (user?.role === 'admin') {
+    return <AdminDashboard />;
+  }
+
+  return <StaffDashboard />;
+}
