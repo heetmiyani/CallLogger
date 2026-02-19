@@ -24,6 +24,7 @@ type CallLogWithClient = {
   reminderDays?: number | null;
   dateTime: string;
   client: {
+    id: number;
     clientCode: string;
     clientName: string;
     phoneNumber: string;
@@ -74,6 +75,7 @@ export default function StaffDashboard() {
 
   const handleReLog = (log: CallLogWithClient) => {
     setSelectedClient({
+      id: log.client.id,
       clientCode: log.client.clientCode,
       clientName: log.client.clientName,
       phoneNumber: log.client.phoneNumber,

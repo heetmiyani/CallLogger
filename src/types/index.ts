@@ -17,6 +17,7 @@ export interface InternalUser extends User {
 ======================= */
 
 export interface Client {
+  id: number;
   clientCode: string;
   clientName: string;
   phoneNumber: string;
