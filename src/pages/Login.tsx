@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Phone, Lock, User, Loader2 } from 'lucide-react';
+import { Phone, Lock, Mail, Loader2 } from 'lucide-react';
 
 export default function Login() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { login } = useAuth();
@@ -18,18 +18,18 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!username || !password) {
+
+    if (!email || !password) {
       toast({
         title: 'Error',
-        description: 'Please enter both username and password',
+        description: 'Please enter both email and password',
         variant: 'destructive',
       });
       return;
     }
 
     setIsLoggingIn(true);
-    const success = await login(username, password);
+    const success = await login(email, password);
     setIsLoggingIn(false);
 
     if (success) {
@@ -41,7 +41,7 @@ export default function Login() {
     } else {
       toast({
         title: 'Login Failed',
-        description: 'Invalid username or password. Please try again.',
+        description: 'Invalid email or password. Please try again.',
         variant: 'destructive',
       });
     }
@@ -62,29 +62,34 @@ export default function Login() {
             <Phone className="w-8 h-8 text-accent-foreground" />
           </div>
           <h1 className="text-3xl font-bold text-primary-foreground">CallLogger</h1>
-          <p className="text-primary-foreground/70 mt-2">Client Communication Management</p>
+          <p className="text-primary-foreground/70 mt-2">
+            Client Communication Management
+          </p>
         </div>
 
         {/* Login Card */}
         <Card className="shadow-elevated border-0">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-semibold text-center">Sign In</CardTitle>
+            <CardTitle className="text-2xl font-semibold text-center">
+              Sign In
+            </CardTitle>
             <CardDescription className="text-center">
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
                     disabled={isLoggingIn}
                   />
@@ -107,16 +112,16 @@ export default function Login() {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                variant="hero" 
-                size="lg" 
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
                 className="w-full"
                 disabled={isLoggingIn}
               >
                 {isLoggingIn ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
                     Signing in...
                   </>
                 ) : (
@@ -126,33 +131,19 @@ export default function Login() {
             </form>
 
             <div className="mt-6 text-center">
-              <button 
+              <button
                 type="button"
                 className="text-sm text-muted-foreground hover:text-accent transition-colors"
-                onClick={() => {
+                onClick={() =>
                   toast({
                     title: 'Contact Admin',
-                    description: 'Please contact your administrator to reset your password.',
-                  });
-                }}
+                    description:
+                      'Please contact your administrator to reset your password.',
+                  })
+                }
               >
                 Forgot your password?
               </button>
-            </div>
-
-            {/* Demo credentials */}
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <p className="text-xs text-muted-foreground text-center mb-2">Demo Credentials</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-center">
-                  <p className="font-medium text-foreground">Admin</p>
-                  <p className="text-muted-foreground">admin / admin123</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-medium text-foreground">Staff</p>
-                  <p className="text-muted-foreground">staff1 / staff123</p>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>

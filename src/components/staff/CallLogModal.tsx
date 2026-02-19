@@ -1,9 +1,21 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Client, CallLog } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
@@ -17,9 +29,34 @@ interface CallLogModalProps {
   onClose: () => void;
 }
 
-export default function CallLogModal({ client, isOpen, onClose }: CallLogModalProps) {
-  const [callRegarding, setCallRegarding] = useState<'Mutual Funds' | 'Trading' | ''>('');
-  const [status, setStatus] = useState<'Answered' | 'Not Answered' | ''>('');
+const CALL_CATEGORIES: CallLog['callRegarding'][] = [
+  'Trading',
+  'Mutual Funds',
+  'IPO',
+  'MTF',
+  'FNO',
+  'DP Dues',
+  'SLBM',
+  'Back office',
+];
+
+export default function CallLogModal({
+  client,
+  isOpen,
+  onClose,
+}: CallLogModalProps) {
+  const [callRegarding, setCallRegarding] =
+    useState<CallLog['callRegarding'] | undefined>(undefined);
+
+  const [status, setStatus] =
+    useState<CallLog['status'] | undefined>(undefined);
+
+  const [interestStatus, setInterestStatus] =
+    useState<CallLog['interestStatus'] | undefined>(undefined);
+
+  const [reminderDays, setReminderDays] =
+    useState<number | undefined>(undefined);
+
   const [response, setResponse] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,8 +66,10 @@ export default function CallLogModal({ client, isOpen, onClose }: CallLogModalPr
 
   const currentDateTime = new Date();
 
+  if (!client || !user) return null;
+
   const handleSubmit = async () => {
-    if (!callRegarding || !status || !client || !user) {
+    if (!callRegarding || !status) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields',
@@ -39,29 +78,57 @@ export default function CallLogModal({ client, isOpen, onClose }: CallLogModalPr
       return;
     }
 
-    if (status === 'Answered' && !response.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter the client response',
-        variant: 'destructive',
-      });
-      return;
+    if (status === 'Answered') {
+      if (!interestStatus) {
+        toast({
+          title: 'Error',
+          description: 'Please select interest',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (
+        interestStatus === 'Interested' &&
+        (!reminderDays || reminderDays <= 0)
+      ) {
+        toast({
+          title: 'Error',
+          description: 'Please enter valid reminder days',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!response.trim()) {
+        toast({
+          title: 'Error',
+          description: 'Please enter the client response',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
-
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const newLog: Omit<CallLog, 'id'> = {
-      clientCode: client.clientCode,
+      clientCode: String(client.clientCode),
       clientName: client.clientName,
       phoneNumber: client.phoneNumber,
       callRegarding,
       status,
+      interestStatus:
+        status === 'Answered'
+          ? interestStatus!
+          : 'Not Interested',
+      reminderDays:
+        status === 'Answered' && interestStatus === 'Interested'
+          ? reminderDays
+          : undefined,
       response: status === 'Answered' ? response : undefined,
       dateTime: currentDateTime.toISOString(),
-      staffId: user.id,
       staffName: user.name,
     };
 
@@ -72,22 +139,18 @@ export default function CallLogModal({ client, isOpen, onClose }: CallLogModalPr
       description: 'Call log has been saved successfully.',
     });
 
-    // Reset form
-    setCallRegarding('');
-    setStatus('');
-    setResponse('');
+    handleClose();
     setIsSubmitting(false);
-    onClose();
   };
 
   const handleClose = () => {
-    setCallRegarding('');
-    setStatus('');
+    setCallRegarding(undefined);
+    setStatus(undefined);
+    setInterestStatus(undefined);
+    setReminderDays(undefined);
     setResponse('');
     onClose();
   };
-
-  if (!client) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -104,7 +167,7 @@ export default function CallLogModal({ client, isOpen, onClose }: CallLogModalPr
                 <User className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">{client.clientName}</p>
+                <p className="font-semibold">{client.clientName}</p>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Hash className="w-3 h-3" />
@@ -122,21 +185,26 @@ export default function CallLogModal({ client, isOpen, onClose }: CallLogModalPr
           {/* Call Regarding */}
           <div className="space-y-2">
             <Label>Call Regarding *</Label>
-            <Select 
-              value={callRegarding} 
-              onValueChange={(value: 'Mutual Funds' | 'Trading') => setCallRegarding(value)}
+            <Select
+              value={callRegarding}
+              onValueChange={value =>
+                setCallRegarding(value as CallLog['callRegarding'])
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Mutual Funds">Mutual Funds</SelectItem>
-                <SelectItem value="Trading">Trading</SelectItem>
+                {CALL_CATEGORIES.map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Date & Time (Locked) */}
+          {/* Date & Time */}
           <div className="space-y-2">
             <Label>Date & Time</Label>
             <div className="flex items-center gap-4 p-3 bg-muted rounded-lg text-muted-foreground">
@@ -150,9 +218,11 @@ export default function CallLogModal({ client, isOpen, onClose }: CallLogModalPr
           {/* Status */}
           <div className="space-y-2">
             <Label>Status *</Label>
-            <Select 
-              value={status} 
-              onValueChange={(value: 'Answered' | 'Not Answered') => setStatus(value)}
+            <Select
+              value={status}
+              onValueChange={value =>
+                setStatus(value as CallLog['status'])
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
@@ -164,26 +234,75 @@ export default function CallLogModal({ client, isOpen, onClose }: CallLogModalPr
             </Select>
           </div>
 
-          {/* Response (only if Answered) */}
+          {/* Answered-only fields */}
           {status === 'Answered' && (
-            <div className="space-y-2 animate-fade-in">
-              <Label>Client Response *</Label>
-              <Textarea
-                placeholder="Enter the client's response..."
-                value={response}
-                onChange={(e) => setResponse(e.target.value)}
-                rows={4}
-                className="resize-none"
-              />
-            </div>
+            <>
+              {/* Interest */}
+              <div className="space-y-2">
+                <Label>Interest *</Label>
+                <Select
+                  value={interestStatus}
+                  onValueChange={value =>
+                    setInterestStatus(
+                      value as CallLog['interestStatus']
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select interest" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Interested">Interested</SelectItem>
+                    <SelectItem value="Not Interested">
+                      Not Interested
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Reminder */}
+              {interestStatus === 'Interested' && (
+                <div className="space-y-2">
+                  <Label>Reminder (Days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder="e.g. 10"
+                    value={reminderDays ?? ''}
+                    onChange={e =>
+                      setReminderDays(Number(e.target.value))
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Response */}
+              <div className="space-y-2">
+                <Label>Client Response *</Label>
+                <Textarea
+                  placeholder="Enter the client's response..."
+                  value={response}
+                  onChange={e => setResponse(e.target.value)}
+                  rows={4}
+                />
+              </div>
+            </>
           )}
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button variant="hero" onClick={handleSubmit} disabled={isSubmitting}>
+            <Button
+              variant="hero"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
