@@ -3,64 +3,63 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' });
+  if (req.method === 'GET') {
+    try {
+      const { staff } = req.query;
+
+      const logs = await prisma.callLog.findMany({
+        where: staff ? { staffName: staff } : {},
+        include: {
+          client: true,
+        },
+        orderBy: {
+          dateTime: 'desc',
+        },
+      });
+
+      return res.status(200).json(logs);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Failed to fetch logs' });
+    }
   }
 
-  try {
-    const { search, status, category, staff } = req.query;
+  if (req.method === 'POST') {
+    try {
+      const {
+        clientId,
+        staffName,
+        callRegarding,
+        status,
+        interestStatus,
+        reminderDays,
+        response,
+      } = req.body;
 
-    const logs = await prisma.callLog.findMany({
-      where: {
-        AND: [
-          staff ? { staffName: staff } : {},
+      const newLog = await prisma.callLog.create({
+        data: {
+          clientId,
+          staffName,
+          callRegarding,
+          status,
+          interestStatus,
+          reminderDays,
+          response,
+          dateTime: new Date(),
+        },
+      });
 
-          search
-            ? {
-                OR: [
-                  {
-                    client: {
-                      clientName: {
-                        contains: search,
-                        mode: 'insensitive',
-                      },
-                    },
-                  },
-                  {
-                    client: {
-                      clientCode: {
-                        contains: search,
-                        mode: 'insensitive',
-                      },
-                    },
-                  },
-                  {
-                    client: {
-                      phoneNumber: {
-                        contains: search,
-                      },
-                    },
-                  },
-                ],
-              }
-            : {},
-
-          status && status !== 'all' ? { status } : {},
-
-          category && category !== 'all'
-            ? { callRegarding: category }
-            : {},
-        ],
-      },
-      include: {
-        client: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.status(200).json(logs);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+      return res.status(201).json(newLog);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        error: error.message,
+      });
+    }
   }
+
+  // 🔥 VERY IMPORTANT
+  return res.status(405).json({
+    error: 'Method not allowed',
+  });
 }
