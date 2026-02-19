@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ClientSearch from '@/components/staff/ClientSearch';
 import CallLogModal from '@/components/staff/CallLogModal';
 import StatsCard from '@/components/dashboard/StatsCard';
-import { Client, CallLog } from '@/types';
+import { Client } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { useData } from '@/contexts/DataContext';
 import {
   PhoneCall,
   PhoneOff,
@@ -15,43 +14,69 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import {
-  getReminderDate,
-  getReminderPhase,
-  getReminderBadgeVariant,
-} from '@/lib/reminderUtils';
+
+type CallLogWithClient = {
+  id: number;
+  staffName: string;
+  callRegarding: string;
+  status: string;
+  interestStatus: string;
+  reminderDays?: number | null;
+  dateTime: string;
+  client: {
+    clientCode: string;
+    clientName: string;
+    phoneNumber: string;
+  };
+};
 
 export default function StaffDashboard() {
+  const { user } = useAuth();
+
+  const [logs, setLogs] = useState<CallLogWithClient[]>([]);
   const [selectedClient, setSelectedClient] =
     useState<Client | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] =
+    useState(false);
 
-  const { user } = useAuth();
-  const { callLogs, reminderCalls } = useData();
+  /* =========================
+     FETCH STAFF LOGS
+  ========================= */
 
-  // 🔹 Logs of current staff only
-  const myLogs = callLogs.filter(
-    log => log.staffName === user?.name
-  );
+  useEffect(() => {
+    if (!user?.name) return;
 
-  // 🔹 Today stats
-  const todayLogs = myLogs.filter(log => {
-    return (
+    fetch(`/api/call-logs?staff=${user.name}`)
+      .then(res => res.json())
+      .then(data => setLogs(data))
+      .catch(err =>
+        console.error('Failed to fetch logs:', err)
+      );
+  }, [user]);
+
+  /* =========================
+     TODAY LOGS
+  ========================= */
+
+  const todayLogs = logs.filter(
+    log =>
       new Date(log.dateTime).toDateString() ===
       new Date().toDateString()
-    );
-  });
-
-  // 🔔 Reminder calls of this staff (already sorted by priority)
-  const myReminderCalls = reminderCalls.filter(
-    log => log.staffName === user?.name
   );
 
-  const handleReLog = (log: CallLog) => {
+  /* =========================
+     REMINDER LOGS
+  ========================= */
+
+  const reminderLogs = logs.filter(
+    log => log.reminderDays !== null && log.reminderDays !== undefined
+  );
+
+  const handleReLog = (log: CallLogWithClient) => {
     setSelectedClient({
-      clientCode: log.clientCode,
-      clientName: log.clientName,
-      phoneNumber: log.phoneNumber,
+      clientCode: log.client.clientCode,
+      clientName: log.client.clientName,
+      phoneNumber: log.client.phoneNumber,
     });
     setIsModalOpen(true);
   };
@@ -69,6 +94,7 @@ export default function StaffDashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
+
         {/* Header */}
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">
@@ -79,7 +105,10 @@ export default function StaffDashboard() {
           </p>
         </div>
 
-        {/* Stats */}
+        {/* =========================
+            STATS
+        ========================= */}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatsCard
             title="Calls Today"
@@ -108,10 +137,18 @@ export default function StaffDashboard() {
           />
         </div>
 
-        {/* Client Search */}
-        <ClientSearch onSelectClient={handleSelectClient} />
+        {/* =========================
+            CLIENT SEARCH
+        ========================= */}
 
-        {/* 🔔 Reminder Calls */}
+        <ClientSearch
+          onSelectClient={handleSelectClient}
+        />
+
+        {/* =========================
+            REMINDER SECTION
+        ========================= */}
+
         <div className="bg-card rounded-xl border shadow-card">
           <div className="flex items-center gap-2 px-6 py-4 border-b">
             <Bell className="w-5 h-5 text-primary" />
@@ -120,16 +157,30 @@ export default function StaffDashboard() {
             </h2>
           </div>
 
-          {myReminderCalls.length === 0 ? (
+          {reminderLogs.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">
               No reminder calls available.
             </div>
           ) : (
             <div className="divide-y">
-              {myReminderCalls.map(log => {
-                const phase = getReminderPhase(log);
-                const reminderDate = getReminderDate(log);
-                const isUnlocked = phase !== 'UPCOMING';
+              {reminderLogs.map(log => {
+                const reminderDate = log.reminderDays
+                  ? new Date(
+                      new Date(log.dateTime).getTime() +
+                        log.reminderDays *
+                          24 *
+                          60 *
+                          60 *
+                          1000
+                    )
+                  : null;
+
+                const phase =
+                  reminderDate && reminderDate < new Date()
+                    ? 'OVERDUE'
+                    : reminderDate
+                    ? 'UPCOMING'
+                    : null;
 
                 return (
                   <div
@@ -138,16 +189,21 @@ export default function StaffDashboard() {
                   >
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {log.clientName}
+                        {log.client.clientName}
                       </p>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{log.callRegarding}</span>
+                        <span>
+                          {log.callRegarding}
+                        </span>
+
                         {phase && (
                           <Badge
-                            variant={getReminderBadgeVariant(
-                              phase
-                            )}
+                            variant={
+                              phase === 'OVERDUE'
+                                ? 'destructive'
+                                : 'secondary'
+                            }
                           >
                             {phase}
                           </Badge>
@@ -167,8 +223,9 @@ export default function StaffDashboard() {
 
                     <Button
                       size="sm"
-                      disabled={!isUnlocked}
-                      onClick={() => handleReLog(log)}
+                      onClick={() =>
+                        handleReLog(log)
+                      }
                     >
                       Re-Log Call
                     </Button>
@@ -179,12 +236,16 @@ export default function StaffDashboard() {
           )}
         </div>
 
-        {/* Call Log Modal */}
+        {/* =========================
+            CALL LOG MODAL
+        ========================= */}
+
         <CallLogModal
           client={selectedClient}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
         />
+
       </div>
     </DashboardLayout>
   );

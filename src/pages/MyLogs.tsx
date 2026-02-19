@@ -1,6 +1,5 @@
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useData } from '@/contexts/DataContext';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import {
@@ -11,22 +10,47 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
-import { useState } from 'react';
-import { CallLog } from '@/types';
+import { useEffect, useState } from 'react';
+
+type CallLogWithClient = {
+  id: number;
+  staffName: string;
+  callRegarding: string;
+  status: string;
+  interestStatus: string;
+  reminderDays?: number;
+  response?: string;
+  dateTime: string;
+  createdAt: string;
+  client: {
+    clientCode: string;
+    clientName: string;
+    phoneNumber: string;
+  };
+};
 
 export default function MyLogs() {
   const { user } = useAuth();
-  const { callLogs } = useData();
-  const [selectedLog, setSelectedLog] = useState<CallLog | null>(null);
+  const [logs, setLogs] = useState<CallLogWithClient[]>([]);
+  const [selectedLog, setSelectedLog] =
+    useState<CallLogWithClient | null>(null);
 
-  // ✅ FIX: match logs using staffName (real user)
-  const myLogs = callLogs.filter(
-    log => log.staffName === user?.name
-  );
+  // 🔥 Fetch only this user's logs
+  useEffect(() => {
+    if (!user?.name) return;
+
+    fetch(`/api/call-logs?staff=${user.name}`)
+      .then(res => res.json())
+      .then(data => setLogs(data))
+      .catch(err =>
+        console.error('Failed to fetch my logs:', err)
+      );
+  }, [user]);
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
+
         {/* Header */}
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
@@ -43,61 +67,46 @@ export default function MyLogs() {
             <table className="w-full">
               <thead>
                 <tr className="bg-muted/50">
-                  <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">
+                  <th className="px-6 py-4 text-left text-sm">
                     Client
                   </th>
-                  <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">
+                  <th className="px-6 py-4 text-left text-sm">
                     Category
                   </th>
-                  <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">
+                  <th className="px-6 py-4 text-left text-sm">
                     Status
                   </th>
-                  <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">
+                  <th className="px-6 py-4 text-left text-sm">
                     Date & Time
                   </th>
-                  <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">
+                  <th className="px-6 py-4 text-left text-sm">
                     Action
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {myLogs.map((log) => (
+                {logs.map(log => (
                   <tr
                     key={log.id}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                    className="border-b hover:bg-muted/30"
                   >
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {log.clientName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {log.clientCode}
-                        </p>
-                      </div>
+                      <p className="font-medium">
+                        {log.client.clientName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {log.client.clientCode}
+                      </p>
                     </td>
 
                     <td className="px-6 py-4">
-                      <Badge
-                        variant={
-                          log.callRegarding === 'Mutual Funds'
-                            ? 'default'
-                            : 'secondary'
-                        }
-                      >
+                      <Badge variant="secondary">
                         {log.callRegarding}
                       </Badge>
                     </td>
 
                     <td className="px-6 py-4">
-                      <Badge
-                        variant="outline"
-                        className={
-                          log.status === 'Answered'
-                            ? 'border-success text-success bg-success/10'
-                            : 'border-destructive text-destructive bg-destructive/10'
-                        }
-                      >
+                      <Badge variant="outline">
                         {log.status}
                       </Badge>
                     </td>
@@ -124,15 +133,18 @@ export default function MyLogs() {
             </table>
           </div>
 
-          {myLogs.length === 0 && (
+          {logs.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              <p>You haven't logged any calls yet.</p>
+              You haven't logged any calls yet.
             </div>
           )}
         </div>
 
         {/* Detail Dialog */}
-        <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+        <Dialog
+          open={!!selectedLog}
+          onOpenChange={() => setSelectedLog(null)}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Call Log Details</DialogTitle>
@@ -140,63 +152,17 @@ export default function MyLogs() {
 
             {selectedLog && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Client</p>
-                    <p className="font-medium">
-                      {selectedLog.clientName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedLog.clientCode}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">
-                      {selectedLog.phoneNumber}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Category</p>
-                    <Badge
-                      variant={
-                        selectedLog.callRegarding === 'Mutual Funds'
-                          ? 'default'
-                          : 'secondary'
-                      }
-                    >
-                      {selectedLog.callRegarding}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge
-                      variant="outline"
-                      className={
-                        selectedLog.status === 'Answered'
-                          ? 'border-success text-success bg-success/10'
-                          : 'border-destructive text-destructive bg-destructive/10'
-                      }
-                    >
-                      {selectedLog.status}
-                    </Badge>
-                  </div>
-
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">
-                      Date & Time
-                    </p>
-                    <p className="font-medium">
-                      {format(
-                        new Date(selectedLog.dateTime),
-                        'MMMM dd, yyyy HH:mm:ss'
-                      )}
-                    </p>
-                  </div>
-                </div>
+                <p><b>Client:</b> {selectedLog.client.clientName}</p>
+                <p><b>Phone:</b> {selectedLog.client.phoneNumber}</p>
+                <p><b>Status:</b> {selectedLog.status}</p>
+                <p><b>Category:</b> {selectedLog.callRegarding}</p>
+                <p>
+                  <b>Date:</b>{' '}
+                  {format(
+                    new Date(selectedLog.dateTime),
+                    'MMMM dd, yyyy HH:mm:ss'
+                  )}
+                </p>
 
                 {selectedLog.response && (
                   <div>
@@ -204,9 +170,7 @@ export default function MyLogs() {
                       Response
                     </p>
                     <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-sm">
-                        {selectedLog.response}
-                      </p>
+                      {selectedLog.response}
                     </div>
                   </div>
                 )}
@@ -214,6 +178,7 @@ export default function MyLogs() {
             )}
           </DialogContent>
         </Dialog>
+
       </div>
     </DashboardLayout>
   );
