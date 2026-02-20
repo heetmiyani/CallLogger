@@ -20,7 +20,9 @@ import CallLogs from './pages/CallLogs';
 import StaffActivity from './pages/StaffActivity';
 import MyLogs from './pages/MyLogs';
 import ManageUsers from './pages/ManageUsers';
-import AdminReminderCalls from './pages/AdminReminderCalls'; // ✅ NEW
+import AdminReminderCalls from './pages/AdminReminderCalls';
+import StaffChangeRequest from './pages/StaffChangeRequest';
+import AdminManageData from './pages/AdminManageData';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -35,16 +37,16 @@ const App = () => (
 
           <BrowserRouter>
             <Routes>
-              {/* Default */}
+              {/* Default Redirect */}
               <Route
                 path="/"
                 element={<Navigate to="/login" replace />}
               />
 
-              {/* Auth */}
+              {/* Login */}
               <Route path="/login" element={<Login />} />
 
-              {/* Dashboard (Role-based inside) */}
+              {/* Dashboard (Role-based inside component) */}
               <Route
                 path="/dashboard"
                 element={
@@ -55,6 +57,7 @@ const App = () => (
               />
 
               {/* ================= ADMIN ROUTES ================= */}
+
               <Route
                 path="/call-logs"
                 element={
@@ -91,12 +94,31 @@ const App = () => (
                 }
               />
 
+              <Route
+                path="/admin/manage-data"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminManageData />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* ================= STAFF ROUTES ================= */}
+
               <Route
                 path="/my-logs"
                 element={
                   <ProtectedRoute allowedRoles={['staff']}>
                     <MyLogs />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/staff/change-request"
+                element={
+                  <ProtectedRoute allowedRoles={['staff']}>
+                    <StaffChangeRequest />
                   </ProtectedRoute>
                 }
               />

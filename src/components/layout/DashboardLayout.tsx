@@ -10,10 +10,12 @@ import {
   X,
   PhoneCall,
   UserCog,
-  BellRing, // ✅ NEW
+  BellRing,
+  FileEdit,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -27,12 +29,40 @@ export default function DashboardLayout({
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [pendingCount, setPendingCount] = useState(0);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // ✅ Navigation items
+  // ================= FETCH PENDING REQUESTS =================
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+
+    const fetchPending = async () => {
+      try {
+        const res = await fetch('/api/change-requests');
+        const data = await res.json();
+
+        const pending = data.filter(
+          (req: any) => req.status === 'PENDING'
+        );
+
+        setPendingCount(pending.length);
+      } catch (error) {
+        console.error('Pending fetch failed', error);
+      }
+    };
+
+    fetchPending();
+
+    // Optional auto-refresh every 20 seconds
+    const interval = setInterval(fetchPending, 20000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // ================= NAV ITEMS =================
   const navItems =
     user?.role === 'admin'
       ? [
@@ -46,14 +76,11 @@ export default function DashboardLayout({
             label: 'Call Logs',
             path: '/call-logs',
           },
-
-          // 🔔 ADMIN REMINDER CALLS (NEW)
           {
             icon: BellRing,
             label: 'Reminder Calls',
             path: '/admin/reminder-calls',
           },
-
           {
             icon: Users,
             label: 'Staff Activity',
@@ -63,6 +90,12 @@ export default function DashboardLayout({
             icon: UserCog,
             label: 'Manage Users',
             path: '/manage-users',
+          },
+          {
+            icon: FileEdit,
+            label: 'Manage Data',
+            path: '/admin/manage-data',
+            showBadge: true,
           },
         ]
       : [
@@ -75,6 +108,11 @@ export default function DashboardLayout({
             icon: LayoutDashboard,
             label: 'My Logs',
             path: '/my-logs',
+          },
+          {
+            icon: FileEdit,
+            label: 'Change Request',
+            path: '/staff/change-request',
           },
         ];
 
@@ -125,7 +163,7 @@ export default function DashboardLayout({
         {/* Navigation */}
         <nav className="p-4 space-y-1">
           {navItems.map(item => {
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname.startsWith(item.path);
 
             return (
               <button
@@ -135,39 +173,32 @@ export default function DashboardLayout({
                   setSidebarOpen(false);
                 }}
                 className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200',
+                  'w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200',
                   isActive
                     ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
                     : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 )}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">
-                  {item.label}
-                </span>
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5" />
+                  <span className="font-medium">
+                    {item.label}
+                  </span>
+                </div>
+
+                {/* Pending Badge */}
+                {item.showBadge && pendingCount > 0 && (
+                  <Badge variant="destructive">
+                    {pendingCount}
+                  </Badge>
+                )}
               </button>
             );
           })}
         </nav>
 
-        {/* User & Logout */}
+        {/* Logout */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-              <span className="text-sm font-semibold text-sidebar-foreground">
-                {user?.name?.charAt(0) || 'U'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sidebar-foreground truncate">
-                {user?.name}
-              </p>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">
-                {user?.role}
-              </p>
-            </div>
-          </div>
-
           <Button
             variant="ghost"
             className="w-full justify-start text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10"

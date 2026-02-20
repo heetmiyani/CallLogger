@@ -20,48 +20,70 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
-type CallLogWithClient = {
-  id: number;
+type CallLogType = {
+  id: string;
+  clientId: string;
+  staffId: string;
+
+  clientName: string;
+  clientCode: string;
+  phoneNumber: string;
+
   staffName: string;
+
   callRegarding: string;
   status: string;
   interestStatus: string;
   reminderDays?: number;
   response?: string;
   dateTime: string;
-  createdAt: string;
-  client: {
-    id: number;
-    clientCode: string;
-    clientName: string;
-    phoneNumber: string;
-  };
 };
 
 export default function CallLogs() {
   const { toast } = useToast();
 
-  const [logs, setLogs] = useState<CallLogWithClient[]>([]);
+  const [logs, setLogs] = useState<CallLogType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedLog, setSelectedLog] =
-    useState<CallLogWithClient | null>(null);
+    useState<CallLogType | null>(null);
 
-  // 🔥 Fetch logs from database
+  /* =========================
+     FETCH LOGS
+  ========================= */
   useEffect(() => {
     const delay = setTimeout(() => {
-      const params = new URLSearchParams();
-
-      if (searchQuery) params.append('search', searchQuery);
-      if (statusFilter !== 'all')
-        params.append('status', statusFilter);
-      if (categoryFilter !== 'all')
-        params.append('category', categoryFilter);
-
-      fetch(`/api/call-logs?${params.toString()}`)
+      fetch(`/api/call-logs`)
         .then(res => res.json())
-        .then(data => setLogs(data))
+        .then(data => {
+          let filtered = data;
+
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            filtered = filtered.filter((log: CallLogType) =>
+              log.clientName.toLowerCase().includes(q) ||
+              log.phoneNumber.includes(q) ||
+              log.staffName.toLowerCase().includes(q)
+            );
+          }
+
+          if (statusFilter !== 'all') {
+            filtered = filtered.filter(
+              (log: CallLogType) =>
+                log.status === statusFilter
+            );
+          }
+
+          if (categoryFilter !== 'all') {
+            filtered = filtered.filter(
+              (log: CallLogType) =>
+                log.callRegarding === categoryFilter
+            );
+          }
+
+          setLogs(filtered);
+        })
         .catch(err =>
           console.error('Call logs fetch failed:', err)
         );
@@ -70,6 +92,9 @@ export default function CallLogs() {
     return () => clearTimeout(delay);
   }, [searchQuery, statusFilter, categoryFilter]);
 
+  /* =========================
+     EXPORT CSV
+  ========================= */
   const handleExport = () => {
     const headers = [
       'Client Code',
@@ -85,9 +110,9 @@ export default function CallLogs() {
     ];
 
     const rows = logs.map(log => [
-      log.client.clientCode,
-      log.client.clientName,
-      log.client.phoneNumber,
+      log.clientCode,
+      log.clientName,
+      log.phoneNumber,
       log.callRegarding,
       log.status,
       log.interestStatus,
@@ -99,7 +124,9 @@ export default function CallLogs() {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      ...rows.map(row =>
+        row.map(cell => `"${cell}"`).join(',')
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], {
@@ -107,19 +134,17 @@ export default function CallLogs() {
     });
 
     const url = window.URL.createObjectURL(blob);
-
     const a = document.createElement('a');
     a.href = url;
     a.download = `call_logs_${new Date()
       .toISOString()
       .split('T')[0]}.csv`;
     a.click();
-
     window.URL.revokeObjectURL(url);
 
     toast({
       title: 'Export Successful',
-      description: `${logs.length} call logs exported as CSV.`,
+      description: `${logs.length} call logs exported.`,
     });
   };
 
@@ -128,15 +153,16 @@ export default function CallLogs() {
       <div className="space-y-6 animate-fade-in">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+            <h1 className="text-2xl lg:text-3xl font-bold">
               Call Logs
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground">
               View and manage all call records
             </p>
           </div>
+
           <Button variant="accent" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             Export CSV
@@ -144,79 +170,76 @@ export default function CallLogs() {
         </div>
 
         {/* Filters */}
-        <div className="bg-card rounded-xl p-4 shadow-card border border-border/50">
-          <div className="flex flex-col sm:flex-row gap-4">
-
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="Search by client, phone, or staff name..."
-                value={searchQuery}
-                onChange={e =>
-                  setSearchQuery(e.target.value)
-                }
-                className="pl-10"
-              />
-            </div>
-
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  All Status
-                </SelectItem>
-                <SelectItem value="Answered">
-                  Answered
-                </SelectItem>
-                <SelectItem value="Not Answered">
-                  Not Answered
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={categoryFilter}
-              onValueChange={setCategoryFilter}
-            >
-              <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  All Categories
-                </SelectItem>
-                <SelectItem value="Trading">
-                  Trading
-                </SelectItem>
-                <SelectItem value="Mutual Funds">
-                  Mutual Funds
-                </SelectItem>
-                <SelectItem value="IPO">
-                  IPO
-                </SelectItem>
-                <SelectItem value="MTF">
-                  MTF
-                </SelectItem>
-                <SelectItem value="FNO">
-                  FNO
-                </SelectItem>
-                <SelectItem value="DP Dues">
-                  DP Dues
-                </SelectItem>
-                <SelectItem value="SLBM">
-                  SLBM
-                </SelectItem>
-                <SelectItem value="Back office">
-                  Back office
-                </SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="bg-card rounded-xl p-4 border border-border/50 flex gap-4 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search client, phone, staff..."
+              value={searchQuery}
+              onChange={e =>
+                setSearchQuery(e.target.value)
+              }
+              className="pl-10"
+            />
           </div>
+
+          <Select
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                All Status
+              </SelectItem>
+              <SelectItem value="Answered">
+                Answered
+              </SelectItem>
+              <SelectItem value="Not Answered">
+                Not Answered
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={categoryFilter}
+            onValueChange={setCategoryFilter}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                All Categories
+              </SelectItem>
+              <SelectItem value="Trading">
+                Trading
+              </SelectItem>
+              <SelectItem value="Mutual Funds">
+                Mutual Funds
+              </SelectItem>
+              <SelectItem value="IPO">
+                IPO
+              </SelectItem>
+              <SelectItem value="MTF">
+                MTF
+              </SelectItem>
+              <SelectItem value="FNO">
+                FNO
+              </SelectItem>
+              <SelectItem value="DP Dues">
+                DP Dues
+              </SelectItem>
+              <SelectItem value="SLBM">
+                SLBM
+              </SelectItem>
+              <SelectItem value="Back office">
+                Back office
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -256,10 +279,10 @@ export default function CallLogs() {
                   >
                     <td className="px-6 py-4">
                       <p className="font-medium">
-                        {log.client.clientName}
+                        {log.clientName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {log.client.clientCode}
+                        {log.clientCode}
                       </p>
                     </td>
 
@@ -311,7 +334,7 @@ export default function CallLogs() {
 
           {logs.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              No call logs found matching your criteria.
+              No call logs found.
             </div>
           )}
         </div>
@@ -329,10 +352,12 @@ export default function CallLogs() {
             </DialogHeader>
 
             {selectedLog && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <p>
-                  <b>Client:</b>{' '}
-                  {selectedLog.client.clientName}
+                  <b>Client:</b> {selectedLog.clientName}
+                </p>
+                <p>
+                  <b>Phone:</b> {selectedLog.phoneNumber}
                 </p>
                 <p>
                   <b>Interest:</b>{' '}
@@ -354,7 +379,6 @@ export default function CallLogs() {
             )}
           </DialogContent>
         </Dialog>
-
       </div>
     </DashboardLayout>
   );

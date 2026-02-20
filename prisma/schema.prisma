@@ -20,34 +20,51 @@ model Client {
   phoneNumber String
   createdAt   DateTime @default(now())
 
-  callLogs    CallLog[]  
+  callLogs       CallLog[]
+  changeRequests ChangeRequest[]
 }
 
-
 model CallLog {
-  id            Int      @id @default(autoincrement())
-  clientId      Int
-  staffId       Int
-  callRegarding String
-  status        String
+  id             Int      @id @default(autoincrement())
+  clientId       Int
+  staffId        Int
+  callRegarding  String
+  status         String
   interestStatus String
-  reminderDays  Int?
-  response      String?
-  dateTime      DateTime
-  createdAt     DateTime @default(now())
+  reminderDays   Int?
+  response       String?
+  dateTime       DateTime
+  createdAt      DateTime @default(now())
 
   client Client @relation(fields: [clientId], references: [id])
   staff  Staff  @relation(fields: [staffId], references: [id])
 }
 
-
 model Staff {
-  id       Int    @id @default(autoincrement())
-  name     String
-  email    String @unique
-  password String
-  role     String
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String
   createdAt DateTime @default(now())
 
-  callLogs CallLog[]
+  callLogs       CallLog[]
+  changeRequests ChangeRequest[]
+}
+
+model ChangeRequest {
+  id Int @id @default(autoincrement())
+
+  clientId    Int
+  requestedBy Int
+
+  field    String
+  oldValue String
+  newValue String
+  status   String @default("PENDING")
+
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id])
+  staff  Staff  @relation(fields: [requestedBy], references: [id])
 }
