@@ -8,7 +8,9 @@ export default async function handler(req, res) {
       const { staffId } = req.query;
 
       const logs = await prisma.callLog.findMany({
-        where: staffId ? { staffId } : {},
+        where: staffId
+        ? { staffId: Number(staffId) }
+        : {},
         include: {
           client: true,
           staff: true,
