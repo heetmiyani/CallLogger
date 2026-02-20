@@ -17,13 +17,14 @@ import { format } from 'date-fns';
 
 type CallLogWithClient = {
   id: number;
-  staffName: string;
+  staffId: number;
   callRegarding: string;
   status: string;
   interestStatus: string;
   reminderDays?: number | null;
   dateTime: string;
-  client: {
+
+  client?: {
     id: number;
     clientCode: string;
     clientName: string;
@@ -45,10 +46,13 @@ export default function StaffDashboard() {
   ========================= */
 
   useEffect(() => {
-    if (!user?.name) return;
+    if (!user?.id) return;
 
-    fetch(`/api/call-logs?staff=${user.id}`)
-      .then(res => res.json())
+    fetch(`/api/call-logs?staffId=${user.id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch logs');
+        return res.json();
+      })
       .then(data => setLogs(data))
       .catch(err =>
         console.error('Failed to fetch logs:', err)
@@ -70,10 +74,14 @@ export default function StaffDashboard() {
   ========================= */
 
   const reminderLogs = logs.filter(
-    log => log.reminderDays !== null && log.reminderDays !== undefined
+    log =>
+      log.reminderDays !== null &&
+      log.reminderDays !== undefined
   );
 
   const handleReLog = (log: CallLogWithClient) => {
+    if (!log.client) return;
+
     setSelectedClient({
       id: log.client.id,
       clientCode: log.client.clientCode,
@@ -191,7 +199,7 @@ export default function StaffDashboard() {
                   >
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {log.client.clientName}
+                        {log.client?.clientName || 'Unknown'}
                       </p>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">

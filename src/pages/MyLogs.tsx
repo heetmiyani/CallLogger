@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 
 type CallLogWithClient = {
   id: number;
-  staffName: string;
+  staffId: number;
   callRegarding: string;
   status: string;
   interestStatus: string;
@@ -22,10 +22,16 @@ type CallLogWithClient = {
   response?: string;
   dateTime: string;
   createdAt: string;
-  client: {
+
+  client?: {
     clientCode: string;
     clientName: string;
     phoneNumber: string;
+  };
+
+  staff?: {
+    id: number;
+    name: string;
   };
 };
 
@@ -35,12 +41,17 @@ export default function MyLogs() {
   const [selectedLog, setSelectedLog] =
     useState<CallLogWithClient | null>(null);
 
-  // 🔥 Fetch only this user's logs
+  /* =========================
+     FETCH ONLY THIS STAFF LOGS
+  ========================= */
   useEffect(() => {
-    if (!user?.name) return;
+    if (!user?.id) return;
 
-    fetch(`/api/call-logs?staff=${user.id}`)
-      .then(res => res.json())
+    fetch(`/api/call-logs?staffId=${user.id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch logs');
+        return res.json();
+      })
       .then(data => setLogs(data))
       .catch(err =>
         console.error('Failed to fetch my logs:', err)
@@ -92,10 +103,10 @@ export default function MyLogs() {
                   >
                     <td className="px-6 py-4">
                       <p className="font-medium">
-                        {log.client.clientName}
+                        {log.client?.clientName || 'Unknown'}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {log.client.clientCode}
+                        {log.client?.clientCode || ''}
                       </p>
                     </td>
 
@@ -152,10 +163,21 @@ export default function MyLogs() {
 
             {selectedLog && (
               <div className="space-y-4">
-                <p><b>Client:</b> {selectedLog.client.clientName}</p>
-                <p><b>Phone:</b> {selectedLog.client.phoneNumber}</p>
-                <p><b>Status:</b> {selectedLog.status}</p>
-                <p><b>Category:</b> {selectedLog.callRegarding}</p>
+                <p>
+                  <b>Client:</b>{' '}
+                  {selectedLog.client?.clientName || 'Unknown'}
+                </p>
+                <p>
+                  <b>Phone:</b>{' '}
+                  {selectedLog.client?.phoneNumber || '-'}
+                </p>
+                <p>
+                  <b>Status:</b> {selectedLog.status}
+                </p>
+                <p>
+                  <b>Category:</b>{' '}
+                  {selectedLog.callRegarding}
+                </p>
                 <p>
                   <b>Date:</b>{' '}
                   {format(
