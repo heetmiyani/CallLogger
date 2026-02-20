@@ -65,7 +65,7 @@ export default function CallLogModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: client.id,   // 🔥 IMPORTANT
-          staffName: user.name,
+          staffId: user.id,
           callRegarding,
           status,
           interestStatus:

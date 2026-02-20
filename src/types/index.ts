@@ -3,13 +3,10 @@
 ======================= */
 
 export interface User {
-  email: string;
-  role: 'admin' | 'staff';
+  id: number;                  // 🔥 required for relational staffId
   name: string;
-}
-
-export interface InternalUser extends User {
-  password: string; // admin-managed credentials
+  email: string;               // keep email
+  role: 'admin' | 'staff';
 }
 
 /* =======================
@@ -88,10 +85,4 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
-
-  // 🔐 Admin-only user management
-  users: InternalUser[];
-  addUser: (user: InternalUser) => void;
-  updateUserPassword: (email: string, password: string) => void;
-  deleteUser: (email: string) => void;
 }

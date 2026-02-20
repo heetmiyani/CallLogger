@@ -25,19 +25,29 @@ model Client {
 
 
 model CallLog {
-  id             Int      @id @default(autoincrement())
-  clientId       Int
-  staffName      String
-  callRegarding  String
-  status         String
+  id            Int      @id @default(autoincrement())
+  clientId      Int
+  staffId       Int
+  callRegarding String
+  status        String
   interestStatus String
-  reminderDays   Int?
-  response       String?
-  dateTime       DateTime
-  createdAt      DateTime @default(now())
+  reminderDays  Int?
+  response      String?
+  dateTime      DateTime
+  createdAt     DateTime @default(now())
 
-  client         Client   @relation(fields: [clientId], references: [id])
+  client Client @relation(fields: [clientId], references: [id])
+  staff  Staff  @relation(fields: [staffId], references: [id])
+}
 
-  @@index([clientId])
-  @@index([status])
+
+model Staff {
+  id       Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  password String
+  role     String
+  createdAt DateTime @default(now())
+
+  callLogs CallLog[]
 }

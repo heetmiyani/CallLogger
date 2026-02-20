@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     try {
       const {
         clientId,
-        staffName,
+        staffId,
         callRegarding,
         status,
         interestStatus,
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       const newLog = await prisma.callLog.create({
         data: {
           clientId,
-          staffName,
+          staffId,
           callRegarding,
           status,
           interestStatus,
