@@ -24,9 +24,11 @@ export default function AdminDashboard() {
      CALL STATS
   ========================= */
   const totalCalls = callLogs.length;
+
   const answeredCalls = callLogs.filter(
     log => log.status === 'Answered'
   ).length;
+
   const notAnsweredCalls = callLogs.filter(
     log => log.status === 'Not Answered'
   ).length;
@@ -35,6 +37,14 @@ export default function AdminDashboard() {
     totalCalls > 0
       ? Math.round((answeredCalls / totalCalls) * 100)
       : 0;
+
+  /* =========================
+     ACTIVE STAFF (REAL FIX)
+     Staff who have at least 1 call log
+  ========================= */
+  const activeStaff = new Set(
+    callLogs.map(log => log.staffName)
+  ).size;
 
   /* =========================
      REMINDER STATS
@@ -80,13 +90,14 @@ export default function AdminDashboard() {
     const csvContent = [
       headers.join(','),
       ...rows.map(row =>
-        row.map(cell => `"${cell}"`).join(',')
+        row.map(cell => `"${cell ?? ''}"`).join(',')
       ),
     ].join('\n');
 
     const blob = new Blob([csvContent], {
       type: 'text/csv',
     });
+
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -148,7 +159,7 @@ export default function AdminDashboard() {
 
           <StatsCard
             title="Active Staff"
-            value={3}
+            value={activeStaff}
             icon={Users}
             variant="accent"
           />
@@ -167,7 +178,7 @@ export default function AdminDashboard() {
             title="Overdue Reminders"
             value={overdueReminders}
             icon={AlertTriangle}
-            variant="warning" // ✅ FIXED (NO destructive)
+            variant="warning"
           />
         </div>
 
