@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useData } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
+
 import {
   BarChart,
   Bar,
@@ -12,23 +13,58 @@ import {
   Legend
 } from 'recharts';
 
+import { User } from '@/types';
+
 export default function StaffActivity() {
-  const { callLogs } = useData();
-  const { users } = useAuth();
+  const { callLogs = [] } = useData();
 
-  // ✅ Get staff users from AuthContext
-  const staffMembers = users.filter(u => u.role === 'staff');
+  const [staffMembers, setStaffMembers] = useState<User[]>([]);
 
-  // ✅ Calculate stats per staff
+  /* =========================
+     LOAD STAFF FROM DB
+  ========================= */
+
+  useEffect(() => {
+    fetch('/api/staff')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch staff');
+        return res.json();
+      })
+      .then(data => {
+        const staffOnly = data.filter(
+          (u: User) => u.role === 'staff'
+        );
+        setStaffMembers(staffOnly);
+      })
+      .catch(err =>
+        console.error('Staff load failed:', err)
+      );
+  }, []);
+
+  /* =========================
+     CALCULATE STAFF STATS
+  ========================= */
+
   const staffStats = staffMembers.map(staff => {
     const staffLogs = callLogs.filter(
       log => log.staffName === staff.name
     );
 
-    const answered = staffLogs.filter(log => log.status === 'Answered').length;
-    const notAnswered = staffLogs.filter(log => log.status === 'Not Answered').length;
-    const mutualFunds = staffLogs.filter(log => log.callRegarding === 'Mutual Funds').length;
-    const trading = staffLogs.filter(log => log.callRegarding === 'Trading').length;
+    const answered = staffLogs.filter(
+      log => log.status === 'Answered'
+    ).length;
+
+    const notAnswered = staffLogs.filter(
+      log => log.status === 'Not Answered'
+    ).length;
+
+    const mutualFunds = staffLogs.filter(
+      log => log.callRegarding === 'Mutual Funds'
+    ).length;
+
+    const trading = staffLogs.filter(
+      log => log.callRegarding === 'Trading'
+    ).length;
 
     return {
       name: staff.name,
@@ -47,7 +83,6 @@ export default function StaffActivity() {
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
-        {/* Header */}
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
             Staff Activity
@@ -59,7 +94,7 @@ export default function StaffActivity() {
 
         {/* Staff Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {staffStats.map((staff) => (
+          {staffStats.map(staff => (
             <div
               key={staff.name}
               className="bg-card rounded-xl p-6 shadow-card border border-border/50"
@@ -71,8 +106,12 @@ export default function StaffActivity() {
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">{staff.name}</h3>
-                  <p className="text-sm text-muted-foreground">Staff Member</p>
+                  <h3 className="font-semibold text-foreground">
+                    {staff.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Staff Member
+                  </p>
                 </div>
               </div>
 
@@ -81,25 +120,36 @@ export default function StaffActivity() {
                   <p className="text-2xl font-bold text-foreground">
                     {staff.total}
                   </p>
-                  <p className="text-xs text-muted-foreground">Total Calls</p>
+                  <p className="text-xs text-muted-foreground">
+                    Total Calls
+                  </p>
                 </div>
+
                 <div className="p-3 bg-success/10 rounded-lg text-center">
                   <p className="text-2xl font-bold text-success">
                     {staff.answerRate}%
                   </p>
-                  <p className="text-xs text-muted-foreground">Answer Rate</p>
+                  <p className="text-xs text-muted-foreground">
+                    Answer Rate
+                  </p>
                 </div>
+
                 <div className="p-3 bg-primary/10 rounded-lg text-center">
                   <p className="text-2xl font-bold text-primary">
                     {staff.mutualFunds}
                   </p>
-                  <p className="text-xs text-muted-foreground">Mutual Funds</p>
+                  <p className="text-xs text-muted-foreground">
+                    Mutual Funds
+                  </p>
                 </div>
+
                 <div className="p-3 bg-accent/10 rounded-lg text-center">
                   <p className="text-2xl font-bold text-accent">
                     {staff.trading}
                   </p>
-                  <p className="text-xs text-muted-foreground">Trading</p>
+                  <p className="text-xs text-muted-foreground">
+                    Trading
+                  </p>
                 </div>
               </div>
             </div>
@@ -117,6 +167,7 @@ export default function StaffActivity() {
           <h3 className="text-lg font-semibold text-foreground mb-6">
             Staff Performance Comparison
           </h3>
+
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={staffStats}>
@@ -125,6 +176,7 @@ export default function StaffActivity() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
+
                 <Bar
                   dataKey="answered"
                   name="Answered"

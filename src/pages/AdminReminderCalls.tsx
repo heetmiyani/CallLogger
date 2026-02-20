@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useData } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,26 +27,51 @@ import {
   getReminderDate,
   getReminderBadgeVariant,
 } from '@/lib/reminderUtils';
-import { CallLog } from '@/types';
+import { CallLog, User } from '@/types';
 
 export default function AdminReminderCalls() {
-  const { reminderCalls, reassignReminder } = useData();
-  const { users } = useAuth();
+  const { reminderCalls = [], reassignReminder } = useData();
 
+  const [staffUsers, setStaffUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [selectedLog, setSelectedLog] =
     useState<CallLog | null>(null);
 
-  const staffUsers = users.filter(u => u.role === 'staff');
+  /* =========================
+     LOAD STAFF FROM DB
+  ========================= */
 
-  const filtered = reminderCalls.filter(log => {
-    const q = search.toLowerCase();
-    return (
-      log.clientName.toLowerCase().includes(q) ||
-      log.clientCode.toLowerCase().includes(q) ||
-      log.staffName.toLowerCase().includes(q)
-    );
-  });
+  useEffect(() => {
+    fetch('/api/staff')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch staff');
+        return res.json();
+      })
+      .then(data => {
+        // Only staff role
+        const staffOnly = data.filter(
+          (u: User) => u.role === 'staff'
+        );
+        setStaffUsers(staffOnly);
+      })
+      .catch(err =>
+        console.error('Staff load failed:', err)
+      );
+  }, []);
+
+  /* =========================
+     FILTER REMINDERS
+  ========================= */
+
+  const filtered =
+    reminderCalls?.filter(log => {
+      const q = search.toLowerCase();
+      return (
+        log.clientName?.toLowerCase().includes(q) ||
+        log.clientCode?.toLowerCase().includes(q) ||
+        log.staffName?.toLowerCase().includes(q)
+      );
+    }) || [];
 
   return (
     <DashboardLayout>
@@ -112,7 +136,6 @@ export default function AdminReminderCalls() {
                     </div>
                   </div>
 
-                  {/* ✅ VIEW BUTTON RESTORED */}
                   <Button
                     size="sm"
                     variant="outline"
@@ -126,7 +149,7 @@ export default function AdminReminderCalls() {
           )}
         </div>
 
-        {/* ================= VIEW MODAL ================= */}
+        {/* View Modal */}
         <Dialog
           open={!!selectedLog}
           onOpenChange={() => setSelectedLog(null)}
@@ -164,8 +187,6 @@ export default function AdminReminderCalls() {
                     {selectedLog.response || '-'}
                   </p>
                 </div>
-
-                {/* 🔁 REASSIGN */}
                 <div className="space-y-2">
                   <p className="text-sm font-medium">
                     Reassign to staff
@@ -185,7 +206,7 @@ export default function AdminReminderCalls() {
                     <SelectContent>
                       {staffUsers.map(user => (
                         <SelectItem
-                          key={user.email}
+                          key={user.id}
                           value={user.name}
                         >
                           {user.name}

@@ -4,7 +4,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
-import { Client } from '@/types';
+import { Client, CallLog } from '@/types';
 
 /* =========================
    CONTEXT TYPE
@@ -12,14 +12,23 @@ import { Client } from '@/types';
 
 interface DataContextType {
   clients: Client[];
+  callLogs: CallLog[];
+  reminderCalls: CallLog[];
 
-  /** 🔍 Client search */
   searchClients: (query: string) => Client[];
+
+  addCallLog: (data: any) => Promise<void>;
+  reassignReminder: (
+    logId: string,
+    staffName: string
+  ) => Promise<void>;
+
+  refreshCallLogs: () => Promise<void>;
 }
 
-const DataContext = createContext<DataContextType | undefined>(
-  undefined
-);
+const DataContext = createContext<
+  DataContextType | undefined
+>(undefined);
 
 /* =========================
    PROVIDER
@@ -31,30 +40,84 @@ export function DataProvider({
   children: React.ReactNode;
 }) {
   const [clients, setClients] = useState<Client[]>([]);
+  const [callLogs, setCallLogs] = useState<CallLog[]>([]);
+  const [reminderCalls, setReminderCalls] =
+    useState<CallLog[]>([]);
 
   /* =========================
-     LOAD CLIENTS FROM DATABASE
+     LOAD CLIENTS
   ========================= */
 
   useEffect(() => {
     fetch('/api/clients')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('Failed to fetch clients');
-        }
-        return res.json();
-      })
-      .then(data => {
-        setClients(data);
-      })
+      .then(res => res.json())
+      .then(data => setClients(data))
       .catch(err =>
-        console.error('❌ Client API load failed:', err)
+        console.error('Client load failed:', err)
       );
   }, []);
 
   /* =========================
-     🔍 CLIENT SEARCH (Frontend helper)
-     NOTE: For dropdown autocomplete only
+     LOAD CALL LOGS
+  ========================= */
+
+  const refreshCallLogs = async () => {
+    try {
+      const res = await fetch('/api/call-logs');
+      const data = await res.json();
+
+      setCallLogs(data);
+
+      // reminder = interested + reminderDays
+      const reminders = data.filter(
+        (log: CallLog) =>
+          log.interestStatus === 'Interested' &&
+          log.reminderDays
+      );
+
+      setReminderCalls(reminders);
+    } catch (err) {
+      console.error('CallLogs load failed:', err);
+    }
+  };
+
+  useEffect(() => {
+    refreshCallLogs();
+  }, []);
+
+  /* =========================
+     ADD CALL LOG
+  ========================= */
+
+  const addCallLog = async (data: any) => {
+    await fetch('/api/call-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    await refreshCallLogs();
+  };
+
+  /* =========================
+     REASSIGN REMINDER
+  ========================= */
+
+  const reassignReminder = async (
+    logId: string,
+    staffName: string
+  ) => {
+    await fetch(`/api/call-logs/${logId}/reassign`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffName }),
+    });
+
+    await refreshCallLogs();
+  };
+
+  /* =========================
+     SEARCH CLIENTS
   ========================= */
 
   const searchClients = (query: string): Client[] => {
@@ -63,8 +126,12 @@ export function DataProvider({
     const q = query.toLowerCase();
 
     return clients.filter(client =>
-      client.clientCode.toLowerCase().includes(q) ||
-      client.clientName.toLowerCase().includes(q) ||
+      client.clientCode
+        .toLowerCase()
+        .includes(q) ||
+      client.clientName
+        .toLowerCase()
+        .includes(q) ||
       client.phoneNumber.includes(q)
     );
   };
@@ -77,7 +144,12 @@ export function DataProvider({
     <DataContext.Provider
       value={{
         clients,
+        callLogs,
+        reminderCalls,
         searchClients,
+        addCallLog,
+        reassignReminder,
+        refreshCallLogs,
       }}
     >
       {children}
@@ -93,7 +165,7 @@ export function useData() {
   const context = useContext(DataContext);
   if (!context) {
     throw new Error(
-      'useData must be used within a DataProvider'
+      'useData must be used within DataProvider'
     );
   }
   return context;
