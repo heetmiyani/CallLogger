@@ -5,6 +5,7 @@ import React, {
   useState,
 } from 'react';
 import { Client, CallLog } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 /* =========================
    CONTEXT TYPE
@@ -39,6 +40,8 @@ export function DataProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const { user } = useAuth();
+
   const [clients, setClients] = useState<Client[]>([]);
   const [callLogs, setCallLogs] = useState<CallLog[]>([]);
   const [reminderCalls, setReminderCalls] =
@@ -51,7 +54,13 @@ export function DataProvider({
   useEffect(() => {
     fetch('/api/clients')
       .then(res => res.json())
-      .then(data => setClients(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setClients(data);
+        } else {
+          setClients([]);
+        }
+      })
       .catch(err =>
         console.error('Client load failed:', err)
       );
@@ -63,13 +72,21 @@ export function DataProvider({
 
   const refreshCallLogs = async () => {
     try {
-      const res = await fetch('/api/call-logs');
+      let url = '/api/call-logs';
+
+      // ✅ Staff sees only their logs
+      if (user?.role === 'staff') {
+        url = `/api/call-logs?staffId=${user.id}`;
+      }
+
+      const res = await fetch(url);
       const data = await res.json();
 
-      setCallLogs(data);
+      const safeData = Array.isArray(data) ? data : [];
 
-      // reminder = interested + reminderDays
-      const reminders = data.filter(
+      setCallLogs(safeData);
+
+      const reminders = safeData.filter(
         (log: CallLog) =>
           log.interestStatus === 'Interested' &&
           log.reminderDays
@@ -78,12 +95,16 @@ export function DataProvider({
       setReminderCalls(reminders);
     } catch (err) {
       console.error('CallLogs load failed:', err);
+      setCallLogs([]);
+      setReminderCalls([]);
     }
   };
 
   useEffect(() => {
-    refreshCallLogs();
-  }, []);
+    if (user) {
+      refreshCallLogs();
+    }
+  }, [user]);
 
   /* =========================
      ADD CALL LOG
