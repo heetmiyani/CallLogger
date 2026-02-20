@@ -39,7 +39,7 @@ export default function MyLogs() {
   useEffect(() => {
     if (!user?.name) return;
 
-    fetch(`/api/call-logs?staff=${user.name}`)
+    fetch(`/api/call-logs?staff=${user.id}`)
       .then(res => res.json())
       .then(data => setLogs(data))
       .catch(err =>

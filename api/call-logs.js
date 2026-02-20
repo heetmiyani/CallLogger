@@ -5,24 +5,29 @@ const prisma = new PrismaClient();
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      const { staff } = req.query;
-
+      const { staffId } = req.query;
+  
       const logs = await prisma.callLog.findMany({
-        where: staff ? { staffName: staff } : {},
+        where: staffId
+          ? { staffId }
+          : {},
         include: {
           client: true,
+          staff: true, // 👈 include staff relation
         },
         orderBy: {
           dateTime: 'desc',
         },
       });
-
+  
       return res.status(200).json(logs);
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Failed to fetch logs' });
+      console.error('Fetch call logs error:', error);
+      return res.status(500).json({
+        error: 'Failed to fetch logs',
+      });
     }
-  }
+  }  
 
   if (req.method === 'POST') {
     try {
