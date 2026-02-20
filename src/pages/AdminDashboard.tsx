@@ -39,11 +39,10 @@ export default function AdminDashboard() {
       : 0;
 
   /* =========================
-     ACTIVE STAFF (REAL FIX)
-     Staff who have at least 1 call log
+     ACTIVE STAFF (RELATIONAL FIX)
   ========================= */
   const activeStaff = new Set(
-    callLogs.map(log => log.staffName)
+    callLogs.map(log => log.staff?.name || 'Unknown')
   ).size;
 
   /* =========================
@@ -60,7 +59,7 @@ export default function AdminDashboard() {
   }).length;
 
   /* =========================
-     EXPORT CSV
+     EXPORT CSV (RELATIONAL FIX)
   ========================= */
   const handleExport = () => {
     const headers = [
@@ -76,14 +75,14 @@ export default function AdminDashboard() {
     ];
 
     const rows = callLogs.map(log => [
-      log.clientCode,
-      log.clientName,
-      log.phoneNumber,
+      log.client?.clientCode || '',
+      log.client?.clientName || '',
+      log.client?.phoneNumber || '',
       log.callRegarding,
       log.status,
       log.interestStatus,
       log.response || '',
-      log.staffName,
+      log.staff?.name || '',
       log.dateTime,
     ]);
 

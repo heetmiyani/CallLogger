@@ -47,7 +47,7 @@ export default function StaffActivity() {
 
   const staffStats = staffMembers.map(staff => {
     const staffLogs = callLogs.filter(
-      log => log.staffName === staff.name
+      log => log.staff?.name === staff.name
     );
 
     const answered = staffLogs.filter(

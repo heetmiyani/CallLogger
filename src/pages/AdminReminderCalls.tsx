@@ -48,7 +48,6 @@ export default function AdminReminderCalls() {
         return res.json();
       })
       .then(data => {
-        // Only staff role
         const staffOnly = data.filter(
           (u: User) => u.role === 'staff'
         );
@@ -60,16 +59,17 @@ export default function AdminReminderCalls() {
   }, []);
 
   /* =========================
-     FILTER REMINDERS
+     FILTER REMINDERS (RELATIONAL FIX)
   ========================= */
 
   const filtered =
     reminderCalls?.filter(log => {
       const q = search.toLowerCase();
+
       return (
-        log.clientName?.toLowerCase().includes(q) ||
-        log.clientCode?.toLowerCase().includes(q) ||
-        log.staffName?.toLowerCase().includes(q)
+        log.client?.clientName?.toLowerCase().includes(q) ||
+        log.client?.clientCode?.toLowerCase().includes(q) ||
+        log.staff?.name?.toLowerCase().includes(q)
       );
     }) || [];
 
@@ -109,10 +109,11 @@ export default function AdminReminderCalls() {
                 >
                   <div>
                     <p className="font-medium">
-                      {log.clientName}
+                      {log.client?.clientName || 'N/A'}
                     </p>
+
                     <p className="text-xs text-muted-foreground">
-                      Staff: {log.staffName}
+                      Staff: {log.staff?.name || 'Unassigned'}
                     </p>
 
                     <div className="flex items-center gap-2 mt-1">
@@ -125,6 +126,7 @@ export default function AdminReminderCalls() {
                           {phase}
                         </Badge>
                       )}
+
                       {reminderDate && (
                         <span className="text-xs text-muted-foreground">
                           {format(
@@ -165,11 +167,11 @@ export default function AdminReminderCalls() {
               <div className="space-y-4">
                 <div>
                   <p className="font-medium">
-                    {selectedLog.clientName}
+                    {selectedLog.client?.clientName}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedLog.clientCode} •{' '}
-                    {selectedLog.phoneNumber}
+                    {selectedLog.client?.clientCode} •{' '}
+                    {selectedLog.client?.phoneNumber}
                   </p>
                 </div>
 
@@ -187,16 +189,18 @@ export default function AdminReminderCalls() {
                     {selectedLog.response || '-'}
                   </p>
                 </div>
+
+                {/* Reassign */}
                 <div className="space-y-2">
                   <p className="text-sm font-medium">
                     Reassign to staff
                   </p>
 
                   <Select
-                    onValueChange={staff =>
+                    onValueChange={staffName =>
                       reassignReminder(
                         selectedLog.id,
-                        staff
+                        staffName
                       )
                     }
                   >

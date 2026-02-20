@@ -20,7 +20,7 @@ interface DataContextType {
 
   addCallLog: (data: any) => Promise<void>;
   reassignReminder: (
-    logId: string,
+    logId: number,
     staffName: string
   ) => Promise<void>;
 
@@ -125,7 +125,7 @@ export function DataProvider({
   ========================= */
 
   const reassignReminder = async (
-    logId: string,
+    logId: number,
     staffName: string
   ) => {
     await fetch(`/api/call-logs/${logId}/reassign`, {

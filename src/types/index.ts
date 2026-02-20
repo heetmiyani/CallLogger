@@ -39,41 +39,34 @@ export type CallStatus = 'Answered' | 'Not Answered';
 export type InterestStatus = 'Interested' | 'Not Interested';
 
 export interface CallLog {
-  id: string;
+  id: number;
 
-  clientCode: string;
-  clientName: string;
-  phoneNumber: string;
+  clientId: number;
+  staffId: number;
 
   callRegarding: CallCategory;
   status: CallStatus;
-
-  /**
-   * Only meaningful when status === 'Answered'
-   * Auto-set to 'Not Interested' otherwise
-   */
   interestStatus: InterestStatus;
 
-  /**
-   * Present only when:
-   * status === 'Answered' && interestStatus === 'Interested'
-   */
   reminderDays?: number;
-
-  /**
-   * ✅ NEW
-   * Marks whether reminder has been resolved
-   * Auto-set to true when staff re-logs the call
-   */
   isReminderResolved?: boolean;
-
-  /**
-   * Present only when status === 'Answered'
-   */
   response?: string;
 
   dateTime: string;
-  staffName: string; // single source of truth
+  createdAt?: string;
+
+  client?: {
+    id: number;
+    clientCode: string;
+    clientName: string;
+    phoneNumber: string;
+  };
+
+  staff?: {
+    id: number;
+    name: string;
+    email?: string;
+  };
 }
 
 /* =======================
