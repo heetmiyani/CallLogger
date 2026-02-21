@@ -1,81 +1,113 @@
-import { useEffect, useState } from 'react';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import { useData } from '@/contexts/DataContext';
-
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useEffect, useState } from 'react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { useData } from '@/contexts/DataContext'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-
-import { Search } from 'lucide-react';
-import { format } from 'date-fns';
-
+} from '@/components/ui/dialog'
+import { Search } from 'lucide-react'
+import { format } from 'date-fns'
 import {
   getReminderPhase,
   getReminderDate,
   getReminderBadgeVariant,
-} from '@/lib/reminderUtils';
-import { CallLog, User } from '@/types';
+} from '@/lib/reminderUtils'
+import { CallLog, User } from '@/types'
 
 export default function AdminReminderCalls() {
-  const { reminderCalls = [], reassignReminder } = useData();
+  const { reminderCalls, reassignReminder } = useData()
 
-  const [staffUsers, setStaffUsers] = useState<User[]>([]);
-  const [search, setSearch] = useState('');
+  const [staffUsers, setStaffUsers] =
+    useState<User[]>([])
+  const [search, setSearch] =
+    useState('')
   const [selectedLog, setSelectedLog] =
-    useState<CallLog | null>(null);
+    useState<CallLog | null>(null)
 
   /* =========================
-     LOAD STAFF FROM DB
+     LOAD STAFF
   ========================= */
-
   useEffect(() => {
-    fetch('/api/staff')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch staff');
-        return res.json();
-      })
-      .then(data => {
-        const staffOnly = data.filter(
-          (u: User) => u.role === 'staff'
-        );
-        setStaffUsers(staffOnly);
-      })
-      .catch(err =>
-        console.error('Staff load failed:', err)
-      );
-  }, []);
+    const loadStaff = async () => {
+      try {
+        const res =
+          await fetch('/api/staff')
+        if (!res.ok)
+          throw new Error()
+
+        const data =
+          await res.json()
+
+        const staffOnly =
+          data.filter(
+            (u: User) =>
+              u.role === 'staff'
+          )
+
+        setStaffUsers(staffOnly)
+      } catch {
+        console.error(
+          'Failed to load staff'
+        )
+      }
+    }
+
+    loadStaff()
+  }, [])
 
   /* =========================
-     FILTER REMINDERS (RELATIONAL FIX)
+     FILTER
   ========================= */
-
   const filtered =
-    reminderCalls?.filter(log => {
-      const q = search.toLowerCase();
+    reminderCalls.filter(
+      (log) => {
+        const q =
+          search.toLowerCase()
 
-      return (
-        log.client?.clientName?.toLowerCase().includes(q) ||
-        log.client?.clientCode?.toLowerCase().includes(q) ||
-        log.staff?.name?.toLowerCase().includes(q)
-      );
-    }) || [];
+        return (
+          log.client.clientName
+            .toLowerCase()
+            .includes(q) ||
+          log.client.clientCode
+            .toLowerCase()
+            .includes(q) ||
+          log.staff.name
+            .toLowerCase()
+            .includes(q)
+        )
+      }
+    )
+
+  /* =========================
+     HANDLE REASSIGN
+  ========================= */
+  const handleReassign =
+    async (
+      logId: number,
+      staffId: number
+    ) => {
+      await reassignReminder(
+        logId,
+        staffId
+      )
+      setSelectedLog(null)
+    }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <h1 className="text-2xl font-bold">
           Reminder Calls (Admin)
         </h1>
@@ -87,7 +119,11 @@ export default function AdminReminderCalls() {
             className="pl-9"
             placeholder="Search client / staff..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(
+                e.target.value
+              )
+            }
           />
         </div>
 
@@ -98,63 +134,84 @@ export default function AdminReminderCalls() {
               No reminder calls found
             </p>
           ) : (
-            filtered.map(log => {
-              const phase = getReminderPhase(log);
-              const reminderDate = getReminderDate(log);
+            filtered.map(
+              (log) => {
+                const phase =
+                  getReminderPhase(
+                    log
+                  )
+                const reminderDate =
+                  getReminderDate(
+                    log
+                  )
 
-              return (
-                <div
-                  key={log.id}
-                  className="flex items-center justify-between px-6 py-4"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {log.client?.clientName || 'N/A'}
-                    </p>
-
-                    <p className="text-xs text-muted-foreground">
-                      Staff: {log.staff?.name || 'Unassigned'}
-                    </p>
-
-                    <div className="flex items-center gap-2 mt-1">
-                      {phase && (
-                        <Badge
-                          variant={getReminderBadgeVariant(
-                            phase
-                          )}
-                        >
-                          {phase}
-                        </Badge>
-                      )}
-
-                      {reminderDate && (
-                        <span className="text-xs text-muted-foreground">
-                          {format(
-                            reminderDate,
-                            'MMM dd, yyyy'
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSelectedLog(log)}
+                return (
+                  <div
+                    key={log.id}
+                    className="flex items-center justify-between px-6 py-4"
                   >
-                    View
-                  </Button>
-                </div>
-              );
-            })
+                    <div>
+                      <p className="font-medium">
+                        {
+                          log.client
+                            .clientName
+                        }
+                      </p>
+
+                      <p className="text-xs text-muted-foreground">
+                        Staff:{' '}
+                        {
+                          log.staff
+                            .name
+                        }
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-1">
+                        {phase && (
+                          <Badge
+                            variant={getReminderBadgeVariant(
+                              phase
+                            )}
+                          >
+                            {phase}
+                          </Badge>
+                        )}
+
+                        {reminderDate && (
+                          <span className="text-xs text-muted-foreground">
+                            {format(
+                              reminderDate,
+                              'MMM dd, yyyy'
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setSelectedLog(
+                          log
+                        )
+                      }
+                    >
+                      View
+                    </Button>
+                  </div>
+                )
+              }
+            )
           )}
         </div>
 
-        {/* View Modal */}
+        {/* Dialog */}
         <Dialog
           open={!!selectedLog}
-          onOpenChange={() => setSelectedLog(null)}
+          onOpenChange={() =>
+            setSelectedLog(null)
+          }
         >
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -167,26 +224,52 @@ export default function AdminReminderCalls() {
               <div className="space-y-4">
                 <div>
                   <p className="font-medium">
-                    {selectedLog.client?.clientName}
+                    {
+                      selectedLog
+                        .client
+                        .clientName
+                    }
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedLog.client?.clientCode} •{' '}
-                    {selectedLog.client?.phoneNumber}
+                    {
+                      selectedLog
+                        .client
+                        .clientCode
+                    }{' '}
+                    •{' '}
+                    {
+                      selectedLog
+                        .client
+                        .phoneNumber
+                    }
                   </p>
                 </div>
 
                 <div className="text-sm space-y-1">
                   <p>
-                    <strong>Category:</strong>{' '}
-                    {selectedLog.callRegarding}
+                    <strong>
+                      Category:
+                    </strong>{' '}
+                    {
+                      selectedLog
+                        .callRegarding
+                    }
                   </p>
                   <p>
-                    <strong>Interest:</strong>{' '}
-                    {selectedLog.interestStatus}
+                    <strong>
+                      Interest:
+                    </strong>{' '}
+                    {
+                      selectedLog
+                        .interestStatus
+                    }
                   </p>
                   <p>
-                    <strong>Response:</strong>{' '}
-                    {selectedLog.response || '-'}
+                    <strong>
+                      Response:
+                    </strong>{' '}
+                    {selectedLog.response ||
+                      '-'}
                   </p>
                 </div>
 
@@ -197,10 +280,14 @@ export default function AdminReminderCalls() {
                   </p>
 
                   <Select
-                    onValueChange={staffName =>
-                      reassignReminder(
+                    onValueChange={(
+                      value
+                    ) =>
+                      handleReassign(
                         selectedLog.id,
-                        staffName
+                        Number(
+                          value
+                        )
                       )
                     }
                   >
@@ -208,14 +295,22 @@ export default function AdminReminderCalls() {
                       <SelectValue placeholder="Select staff" />
                     </SelectTrigger>
                     <SelectContent>
-                      {staffUsers.map(user => (
-                        <SelectItem
-                          key={user.id}
-                          value={user.name}
-                        >
-                          {user.name}
-                        </SelectItem>
-                      ))}
+                      {staffUsers.map(
+                        (user) => (
+                          <SelectItem
+                            key={
+                              user.id
+                            }
+                            value={String(
+                              user.id
+                            )}
+                          >
+                            {
+                              user.name
+                            }
+                          </SelectItem>
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -225,5 +320,5 @@ export default function AdminReminderCalls() {
         </Dialog>
       </div>
     </DashboardLayout>
-  );
+  )
 }

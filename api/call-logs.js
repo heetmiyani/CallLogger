@@ -1,16 +1,45 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient();
+/* =========================
+   SAFE PRISMA INSTANCE
+========================= */
+
+let prisma
+
+if (!global.prisma) {
+  global.prisma = new PrismaClient()
+}
+
+prisma = global.prisma
+
+/* =========================
+   HANDLER
+========================= */
 
 export default async function handler(req, res) {
-  if (req.method === 'GET') {
-    try {
-      const { staffId } = req.query;
+  try {
+    /* =========================
+       GET CALL LOGS
+    ========================= */
+    if (req.method === 'GET') {
+      const { staffId } = req.query
+
+      const whereClause = {}
+
+      if (staffId !== undefined) {
+        const parsedStaffId = Number(staffId)
+
+        if (!Number.isInteger(parsedStaffId)) {
+          return res.status(400).json({
+            error: 'Invalid staffId',
+          })
+        }
+
+        whereClause.staffId = parsedStaffId
+      }
 
       const logs = await prisma.callLog.findMany({
-        where: staffId
-        ? { staffId: Number(staffId) }
-        : {},
+        where: whereClause,
         include: {
           client: true,
           staff: true,
@@ -18,40 +47,15 @@ export default async function handler(req, res) {
         orderBy: {
           dateTime: 'desc',
         },
-      });
+      })
 
-      // 🔥 Transform nested data into flat structure
-      const formattedLogs = logs.map(log => ({
-        id: log.id,
-        clientId: log.clientId,
-        staffId: log.staffId,
-
-        clientName: log.client?.clientName || '',
-        clientCode: log.client?.clientCode || '',
-        phoneNumber: log.client?.phoneNumber || '',
-
-        staffName: log.staff?.name || '',
-
-        callRegarding: log.callRegarding,
-        status: log.status,
-        interestStatus: log.interestStatus,
-        reminderDays: log.reminderDays,
-        response: log.response,
-        dateTime: log.dateTime,
-      }));
-
-      return res.status(200).json(formattedLogs);
-
-    } catch (error) {
-      console.error('Fetch call logs error:', error);
-      return res.status(500).json({
-        error: 'Failed to fetch logs',
-      });
+      return res.status(200).json(logs)
     }
-  }
 
-  if (req.method === 'POST') {
-    try {
+    /* =========================
+       CREATE CALL LOG
+    ========================= */
+    if (req.method === 'POST') {
       const {
         clientId,
         staffId,
@@ -60,32 +64,78 @@ export default async function handler(req, res) {
         interestStatus,
         reminderDays,
         response,
-      } = req.body;
+      } = req.body
+
+      // Required validation (do NOT use !clientId because 0 is falsy)
+      if (
+        clientId === undefined ||
+        staffId === undefined ||
+        !callRegarding ||
+        !status ||
+        !interestStatus
+      ) {
+        return res.status(400).json({
+          error: 'Missing required fields',
+        })
+      }
+
+      const parsedClientId = Number(clientId)
+      const parsedStaffId = Number(staffId)
+
+      if (
+        !Number.isInteger(parsedClientId) ||
+        !Number.isInteger(parsedStaffId)
+      ) {
+        return res.status(400).json({
+          error: 'Invalid clientId or staffId',
+        })
+      }
+
+      // Business rule:
+      // Only allow reminderDays when Interested
+      let finalReminderDays = null
+
+      if (
+        interestStatus === 'Interested' &&
+        reminderDays != null
+      ) {
+        const parsedReminder = Number(reminderDays)
+
+        if (Number.isInteger(parsedReminder) && parsedReminder > 0) {
+          finalReminderDays = parsedReminder
+        }
+      }
 
       const newLog = await prisma.callLog.create({
         data: {
-          clientId,
-          staffId,
+          clientId: parsedClientId,
+          staffId: parsedStaffId,
           callRegarding,
           status,
           interestStatus,
-          reminderDays,
-          response,
+          reminderDays: finalReminderDays,
+          response: response ?? null,
           dateTime: new Date(),
         },
-      });
+        include: {
+          client: true,
+          staff: true,
+        },
+      })
 
-      return res.status(201).json(newLog);
-
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({
-        error: error.message,
-      });
+      return res.status(201).json(newLog)
     }
-  }
 
-  return res.status(405).json({
-    error: 'Method not allowed',
-  });
+    /* ========================= */
+
+    return res.status(405).json({
+      error: 'Method not allowed',
+    })
+  } catch (error) {
+    console.error('Call Logs API Error:', error)
+
+    return res.status(500).json({
+      error: 'Internal server error',
+    })
+  }
 }

@@ -1,9 +1,9 @@
-import { useData } from '@/contexts/DataContext';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import StatsCard from '@/components/dashboard/StatsCard';
-import CallChart from '@/components/dashboard/CallChart';
-import RecentCallsTable from '@/components/dashboard/RecentCallsTable';
-import { Button } from '@/components/ui/button';
+import { useData } from '@/contexts/DataContext'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import StatsCard from '@/components/dashboard/StatsCard'
+import CallChart from '@/components/dashboard/CallChart'
+import RecentCallsTable from '@/components/dashboard/RecentCallsTable'
+import { Button } from '@/components/ui/button'
 import {
   PhoneCall,
   PhoneOff,
@@ -12,54 +12,66 @@ import {
   Download,
   BellRing,
   AlertTriangle,
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { getReminderPhase } from '@/lib/reminderUtils';
+} from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { getReminderPhase } from '@/lib/reminderUtils'
+import { format } from 'date-fns'
 
 export default function AdminDashboard() {
-  const { callLogs, reminderCalls } = useData();
-  const { toast } = useToast();
+  const { callLogs, reminderCalls } = useData()
+  const { toast } = useToast()
 
   /* =========================
      CALL STATS
   ========================= */
-  const totalCalls = callLogs.length;
+  const totalCalls = callLogs.length
 
   const answeredCalls = callLogs.filter(
-    log => log.status === 'Answered'
-  ).length;
+    (log) => log.status === 'Answered'
+  ).length
 
   const notAnsweredCalls = callLogs.filter(
-    log => log.status === 'Not Answered'
-  ).length;
+    (log) => log.status === 'Not Answered'
+  ).length
 
   const answerRate =
     totalCalls > 0
-      ? Math.round((answeredCalls / totalCalls) * 100)
-      : 0;
+      ? Math.round(
+          (answeredCalls / totalCalls) * 100
+        )
+      : 0
 
   /* =========================
-     ACTIVE STAFF (RELATIONAL FIX)
+     ACTIVE STAFF (STRICT RELATIONAL)
   ========================= */
   const activeStaff = new Set(
-    callLogs.map(log => log.staff?.name || 'Unknown')
-  ).size;
+    callLogs.map((log) => log.staffId)
+  ).size
 
   /* =========================
      REMINDER STATS
   ========================= */
-  const activeReminders = reminderCalls.filter(log => {
-    const phase = getReminderPhase(log);
-    return phase === 'ACTIVE' || phase === 'UPCOMING';
-  }).length;
+  const activeReminders = reminderCalls.filter(
+    (log) => {
+      const phase = getReminderPhase(log)
+      return (
+        phase === 'ACTIVE' ||
+        phase === 'UPCOMING'
+      )
+    }
+  ).length
 
-  const overdueReminders = reminderCalls.filter(log => {
-    const phase = getReminderPhase(log);
-    return phase === 'WARNING' || phase === 'CRITICAL';
-  }).length;
+  const overdueReminders =
+    reminderCalls.filter((log) => {
+      const phase = getReminderPhase(log)
+      return (
+        phase === 'WARNING' ||
+        phase === 'CRITICAL'
+      )
+    }).length
 
   /* =========================
-     EXPORT CSV (RELATIONAL FIX)
+     EXPORT CSV (STRICT RELATIONAL)
   ========================= */
   const handleExport = () => {
     const headers = [
@@ -72,45 +84,53 @@ export default function AdminDashboard() {
       'Response',
       'Staff',
       'Date Time',
-    ];
+    ]
 
-    const rows = callLogs.map(log => [
-      log.client?.clientCode || '',
-      log.client?.clientName || '',
-      log.client?.phoneNumber || '',
+    const rows = callLogs.map((log) => [
+      log.client.clientCode,
+      log.client.clientName,
+      log.client.phoneNumber,
       log.callRegarding,
       log.status,
       log.interestStatus,
-      log.response || '',
-      log.staff?.name || '',
-      log.dateTime,
-    ]);
+      log.response ?? '',
+      log.staff.name,
+      format(
+        new Date(log.dateTime),
+        'yyyy-MM-dd HH:mm'
+      ),
+    ])
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row =>
-        row.map(cell => `"${cell ?? ''}"`).join(',')
+      ...rows.map((row) =>
+        row.map((cell) => `"${cell}"`).join(',')
       ),
-    ].join('\n');
+    ].join('\n')
 
     const blob = new Blob([csvContent], {
       type: 'text/csv',
-    });
+    })
 
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const url =
+      window.URL.createObjectURL(blob)
+
+    const a =
+      document.createElement('a')
+    a.href = url
     a.download = `call_logs_${new Date()
       .toISOString()
-      .split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      .split('T')[0]}.csv`
+
+    a.click()
+    window.URL.revokeObjectURL(url)
 
     toast({
       title: 'Export Successful',
-      description: 'Call logs downloaded as CSV.',
-    });
-  };
+      description:
+        'Call logs downloaded as CSV.',
+    })
+  }
 
   return (
     <DashboardLayout>
@@ -126,7 +146,10 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          <Button variant="accent" onClick={handleExport}>
+          <Button
+            variant="accent"
+            onClick={handleExport}
+          >
             <Download className="w-4 h-4 mr-2" />
             Export Data
           </Button>
@@ -185,8 +208,11 @@ export default function AdminDashboard() {
         <CallChart />
 
         {/* ================= RECENT CALLS ================= */}
-        <RecentCallsTable limit={10} showStaff />
+        <RecentCallsTable
+          limit={10}
+          showStaff
+        />
       </div>
     </DashboardLayout>
-  );
+  )
 }

@@ -1,67 +1,35 @@
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import { useAuth } from '@/contexts/AuthContext';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { useAuth } from '@/contexts/AuthContext'
+import { useData } from '@/contexts/DataContext'
+import { Badge } from '@/components/ui/badge'
+import { format } from 'date-fns'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
-import { useEffect, useState } from 'react';
-
-type CallLogWithClient = {
-  id: number;
-  staffId: number;
-  callRegarding: string;
-  status: string;
-  interestStatus: string;
-  reminderDays?: number;
-  response?: string;
-  dateTime: string;
-  createdAt: string;
-
-  client?: {
-    clientCode: string;
-    clientName: string;
-    phoneNumber: string;
-  };
-
-  staff?: {
-    id: number;
-    name: string;
-  };
-};
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Eye } from 'lucide-react'
+import { useState } from 'react'
+import { CallLog } from '@/types'
 
 export default function MyLogs() {
-  const { user } = useAuth();
-  const [logs, setLogs] = useState<CallLogWithClient[]>([]);
+  const { user } = useAuth()
+  const { callLogs } = useData()
+
   const [selectedLog, setSelectedLog] =
-    useState<CallLogWithClient | null>(null);
+    useState<CallLog | null>(null)
 
-  /* =========================
-     FETCH ONLY THIS STAFF LOGS
-  ========================= */
-  useEffect(() => {
-    if (!user?.id) return;
-
-    fetch(`/api/call-logs?staffId=${user.id}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch logs');
-        return res.json();
-      })
-      .then(data => setLogs(data))
-      .catch(err =>
-        console.error('Failed to fetch my logs:', err)
-      );
-  }, [user]);
+  // DataContext already filters logs for staff
+  const logs =
+    user?.role === 'staff'
+      ? callLogs
+      : []
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
-
         {/* Header */}
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
@@ -95,33 +63,38 @@ export default function MyLogs() {
                   </th>
                 </tr>
               </thead>
+
               <tbody>
-                {logs.map(log => (
+                {logs.map((log) => (
                   <tr
                     key={log.id}
                     className="border-b hover:bg-muted/30"
                   >
+                    {/* Client */}
                     <td className="px-6 py-4">
                       <p className="font-medium">
-                        {log.client?.clientName || 'Unknown'}
+                        {log.client.clientName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {log.client?.clientCode || ''}
+                        {log.client.clientCode}
                       </p>
                     </td>
 
+                    {/* Category */}
                     <td className="px-6 py-4">
                       <Badge variant="secondary">
                         {log.callRegarding}
                       </Badge>
                     </td>
 
+                    {/* Status */}
                     <td className="px-6 py-4">
                       <Badge variant="outline">
                         {log.status}
                       </Badge>
                     </td>
 
+                    {/* Date */}
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {format(
                         new Date(log.dateTime),
@@ -129,11 +102,14 @@ export default function MyLogs() {
                       )}
                     </td>
 
+                    {/* Action */}
                     <td className="px-6 py-4">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSelectedLog(log)}
+                        onClick={() =>
+                          setSelectedLog(log)
+                        }
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -154,34 +130,49 @@ export default function MyLogs() {
         {/* Detail Dialog */}
         <Dialog
           open={!!selectedLog}
-          onOpenChange={() => setSelectedLog(null)}
+          onOpenChange={() =>
+            setSelectedLog(null)
+          }
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Call Log Details</DialogTitle>
+              <DialogTitle>
+                Call Log Details
+              </DialogTitle>
             </DialogHeader>
 
             {selectedLog && (
               <div className="space-y-4">
                 <p>
                   <b>Client:</b>{' '}
-                  {selectedLog.client?.clientName || 'Unknown'}
+                  {
+                    selectedLog.client
+                      .clientName
+                  }
                 </p>
                 <p>
                   <b>Phone:</b>{' '}
-                  {selectedLog.client?.phoneNumber || '-'}
+                  {
+                    selectedLog.client
+                      .phoneNumber
+                  }
                 </p>
                 <p>
-                  <b>Status:</b> {selectedLog.status}
+                  <b>Status:</b>{' '}
+                  {selectedLog.status}
                 </p>
                 <p>
                   <b>Category:</b>{' '}
-                  {selectedLog.callRegarding}
+                  {
+                    selectedLog.callRegarding
+                  }
                 </p>
                 <p>
                   <b>Date:</b>{' '}
                   {format(
-                    new Date(selectedLog.dateTime),
+                    new Date(
+                      selectedLog.dateTime
+                    ),
                     'MMMM dd, yyyy HH:mm:ss'
                   )}
                 </p>
@@ -200,8 +191,7 @@ export default function MyLogs() {
             )}
           </DialogContent>
         </Dialog>
-
       </div>
     </DashboardLayout>
-  );
+  )
 }

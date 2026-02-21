@@ -3,10 +3,10 @@
 ======================= */
 
 export interface User {
-  id: number;                  // 🔥 required for relational staffId
-  name: string;
-  email: string;               // keep email
-  role: 'admin' | 'staff';
+  id: number
+  name: string
+  email: string
+  role: 'admin' | 'staff'
 }
 
 /* =======================
@@ -14,10 +14,10 @@ export interface User {
 ======================= */
 
 export interface Client {
-  id: number;
-  clientCode: string;
-  clientName: string;
-  phoneNumber: string;
+  id: number
+  clientCode: string
+  clientName: string
+  phoneNumber: string
 }
 
 /* =======================
@@ -32,41 +32,41 @@ export type CallCategory =
   | 'FNO'
   | 'DP Dues'
   | 'SLBM'
-  | 'Back office';
+  | 'Back office'
 
-export type CallStatus = 'Answered' | 'Not Answered';
+export type CallStatus = 'Answered' | 'Not Answered'
 
-export type InterestStatus = 'Interested' | 'Not Interested';
+export type InterestStatus = 'Interested' | 'Not Interested'
 
 export interface CallLog {
-  id: number;
+  id: number
 
-  clientId: number;
-  staffId: number;
+  clientId: number
+  staffId: number
 
-  callRegarding: CallCategory;
-  status: CallStatus;
-  interestStatus: InterestStatus;
+  callRegarding: CallCategory
+  status: CallStatus
+  interestStatus: InterestStatus
 
-  reminderDays?: number;
-  isReminderResolved?: boolean;
-  response?: string;
+  reminderDays: number | null
+  response: string | null
 
-  dateTime: string;
-  createdAt?: string;
+  dateTime: string
+  createdAt?: string
 
-  client?: {
-    id: number;
-    clientCode: string;
-    clientName: string;
-    phoneNumber: string;
-  };
+  client: {
+    id: number
+    clientCode: string
+    clientName: string
+    phoneNumber: string
+  }
 
-  staff?: {
-    id: number;
-    name: string;
-    email?: string;
-  };
+  staff: {
+    id: number
+    name: string
+    email: string
+    role: string
+  }
 }
 
 /* =======================
@@ -74,8 +74,8 @@ export interface CallLog {
 ======================= */
 
 export interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  isLoading: boolean;
+  user: User | null
+  login: (email: string, password: string) => Promise<boolean>
+  logout: () => void
+  isLoading: boolean
 }
