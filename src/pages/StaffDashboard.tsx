@@ -37,6 +37,20 @@ export default function StaffDashboard() {
       : []
 
   /* =========================
+     HELPER: CHECK IF DATE IS TODAY
+  ========================= */
+  const isToday = (date: string | Date) => {
+    const today = new Date()
+    const givenDate = new Date(date)
+
+    return (
+      today.getFullYear() === givenDate.getFullYear() &&
+      today.getMonth() === givenDate.getMonth() &&
+      today.getDate() === givenDate.getDate()
+    )
+  }
+
+  /* =========================
      TODAY LOGS
   ========================= */
   const todayLogs = logs.filter(
@@ -155,6 +169,9 @@ export default function StaffDashboard() {
                 const phase =
                   getReminderPhase(log)
 
+                const relogAllowed =
+                  isToday(log.dateTime)
+
                 return (
                   <div
                     key={log.id}
@@ -200,9 +217,13 @@ export default function StaffDashboard() {
                     <Button
                       size="sm"
                       onClick={() =>
-                        handleReLog(
-                          log
-                        )
+                        handleReLog(log)
+                      }
+                      disabled={!relogAllowed}
+                      className={
+                        !relogAllowed
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
                       }
                     >
                       Re-Log Call
