@@ -17,11 +17,10 @@ import { User } from '@/types';
 
 export default function StaffActivity() {
   const { callLogs = [] } = useData();
-
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
 
   /* =========================
-     LOAD STAFF FROM DB
+     LOAD STAFF
   ========================= */
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export default function StaffActivity() {
   }, []);
 
   /* =========================
-     CALCULATE STAFF STATS
+     STAFF STATS
   ========================= */
 
   const staffStats = staffMembers.map(staff => {
@@ -80,11 +79,30 @@ export default function StaffActivity() {
     };
   });
 
+  /* =========================
+     OVERALL TOTALS
+  ========================= */
+
+  const totalCalls = staffStats.reduce((sum, s) => sum + s.total, 0);
+  const totalAnswered = staffStats.reduce((sum, s) => sum + s.answered, 0);
+  const totalNotAnswered = staffStats.reduce((sum, s) => sum + s.notAnswered, 0);
+  const totalMutualFunds = staffStats.reduce((sum, s) => sum + s.mutualFunds, 0);
+  const totalTrading = staffStats.reduce((sum, s) => sum + s.trading, 0);
+
+  const overallAnswerRate =
+    totalCalls > 0
+      ? Math.round((totalAnswered / totalCalls) * 100)
+      : 0;
+
+  const topPerformer = staffStats.sort((a, b) => b.total - a.total)[0];
+
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
+
+        {/* Header */}
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+          <h1 className="text-2xl lg:text-3xl font-bold">
             Staff Activity
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -92,65 +110,49 @@ export default function StaffActivity() {
           </p>
         </div>
 
-        {/* Staff Cards */}
+        {/* =========================
+            OVERALL SUMMARY
+        ========================= */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <SummaryCard label="Total Calls" value={totalCalls} />
+          <SummaryCard label="Answered" value={totalAnswered} />
+          <SummaryCard label="Not Answered" value={totalNotAnswered} />
+          <SummaryCard label="Overall Answer Rate" value={`${overallAnswerRate}%`} />
+          <SummaryCard label="Mutual Funds" value={totalMutualFunds} />
+        </div>
+
+        {/* Top Performer */}
+        {topPerformer && (
+          <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
+            <p className="font-semibold">
+              🏆 Top Performer: {topPerformer.name}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {topPerformer.total} total calls | {topPerformer.answerRate}% answer rate
+            </p>
+          </div>
+        )}
+
+        {/* =========================
+            STAFF CARDS
+        ========================= */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {staffStats.map(staff => (
             <div
               key={staff.name}
               className="bg-card rounded-xl p-6 shadow-card border border-border/50"
             >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-                  <span className="text-lg font-semibold text-primary-foreground">
-                    {staff.name.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">
-                    {staff.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Staff Member
-                  </p>
-                </div>
-              </div>
+              <h3 className="font-semibold mb-4">
+                {staff.name}
+              </h3>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-muted rounded-lg text-center">
-                  <p className="text-2xl font-bold text-foreground">
-                    {staff.total}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Total Calls
-                  </p>
-                </div>
-
-                <div className="p-3 bg-success/10 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-success">
-                    {staff.answerRate}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Answer Rate
-                  </p>
-                </div>
-
-                <div className="p-3 bg-primary/10 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-primary">
-                    {staff.mutualFunds}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Mutual Funds
-                  </p>
-                </div>
-
-                <div className="p-3 bg-accent/10 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-accent">
-                    {staff.trading}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Trading
-                  </p>
-                </div>
+              <div className="space-y-2 text-sm">
+                <p>Total Calls: <strong>{staff.total}</strong></p>
+                <p>Answered: <strong>{staff.answered}</strong></p>
+                <p>Not Answered: <strong>{staff.notAnswered}</strong></p>
+                <p>Answer Rate: <strong>{staff.answerRate}%</strong></p>
+                <p>Mutual Funds: <strong>{staff.mutualFunds}</strong></p>
+                <p>Trading: <strong>{staff.trading}</strong></p>
               </div>
             </div>
           ))}
@@ -162,9 +164,11 @@ export default function StaffActivity() {
           )}
         </div>
 
-        {/* Comparison Chart */}
+        {/* =========================
+            COMPARISON CHART
+        ========================= */}
         <div className="bg-card rounded-xl p-6 shadow-card border border-border/50">
-          <h3 className="text-lg font-semibold text-foreground mb-6">
+          <h3 className="text-lg font-semibold mb-6">
             Staff Performance Comparison
           </h3>
 
@@ -177,21 +181,26 @@ export default function StaffActivity() {
                 <Tooltip />
                 <Legend />
 
-                <Bar
-                  dataKey="answered"
-                  name="Answered"
-                  fill="hsl(142, 71%, 45%)"
-                />
-                <Bar
-                  dataKey="notAnswered"
-                  name="Not Answered"
-                  fill="hsl(0, 84%, 60%)"
-                />
+                <Bar dataKey="answered" name="Answered" fill="#22c55e" />
+                <Bar dataKey="notAnswered" name="Not Answered" fill="#ef4444" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+/* =========================
+   SMALL SUMMARY CARD COMPONENT
+========================= */
+
+function SummaryCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-card rounded-xl p-4 shadow-card border border-border/50 text-center">
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
   );
 }
