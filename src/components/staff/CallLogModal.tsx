@@ -18,9 +18,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Client } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext'; // ✅ IMPORTANT
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { Calendar, Clock, User, Phone, Hash, Loader2 } from 'lucide-react';
+import { User, Phone, Hash, Loader2 } from 'lucide-react';
 
 interface CallLogModalProps {
   client: Client | null;
@@ -41,9 +41,8 @@ export default function CallLogModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { user } = useAuth();
+  const { addCallLog } = useData(); // ✅ USE CONTEXT
   const { toast } = useToast();
-
-  const currentDateTime = new Date();
 
   if (!client || !user) return null;
 
@@ -60,34 +59,26 @@ export default function CallLogModal({
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/call-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId: client.id,   // 🔥 IMPORTANT
-          staffId: user.id,
-          callRegarding,
-          status,
-          interestStatus:
-            status === 'Answered'
-              ? interestStatus
-              : 'Not Interested',
-          reminderDays:
-            status === 'Answered' &&
-            interestStatus === 'Interested'
-              ? reminderDays
-              : null,
-          response:
-            status === 'Answered'
-              ? response
-              : null,
-        }),
+      // ✅ Use DataContext function instead of fetch
+      await addCallLog({
+        clientId: client.id,
+        staffId: user.id,
+        callRegarding,
+        status,
+        interestStatus:
+          status === 'Answered'
+            ? interestStatus
+            : 'Not Interested',
+        reminderDays:
+          status === 'Answered' &&
+          interestStatus === 'Interested'
+            ? reminderDays
+            : null,
+        response:
+          status === 'Answered'
+            ? response
+            : null,
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to save');
-      }
 
       toast({
         title: 'Success!',
@@ -98,7 +89,8 @@ export default function CallLogModal({
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message,
+        description:
+          error?.message || 'Failed to save',
         variant: 'destructive',
       });
     } finally {
@@ -173,7 +165,7 @@ export default function CallLogModal({
             </Select>
           </div>
 
-          {/* Interest + Reminder */}
+          {/* Answered Section */}
           {status === 'Answered' && (
             <>
               <div className="space-y-2">
@@ -229,6 +221,7 @@ export default function CallLogModal({
             >
               Cancel
             </Button>
+
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
