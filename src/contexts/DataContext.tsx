@@ -66,28 +66,16 @@ export function DataProvider({
   useEffect(() => {
     const loadClients = async () => {
       try {
-        const res = await fetch(
-          '/api/clients'
-        )
+        const res = await fetch('/api/clients')
 
         if (!res.ok)
-          throw new Error(
-            'Failed to load clients'
-          )
+          throw new Error('Failed to load clients')
 
-        const data =
-          await res.json()
+        const data = await res.json()
 
-        setClients(
-          Array.isArray(data)
-            ? data
-            : []
-        )
+        setClients(Array.isArray(data) ? data : [])
       } catch (err) {
-        console.error(
-          'Client load failed:',
-          err
-        )
+        console.error('Client load failed:', err)
         setClients([])
       }
     }
@@ -99,58 +87,41 @@ export function DataProvider({
      LOAD CALL LOGS
   ========================= */
 
-  const refreshCallLogs =
-    useCallback(async () => {
-      try {
-        let url =
-          '/api/call-logs'
+  const refreshCallLogs = useCallback(async () => {
+    try {
+      let url = '/api/call-logs'
 
-        if (
-          user?.role ===
-          'staff'
-        ) {
-          url = `/api/call-logs?staffId=${user.id}`
-        }
-
-        const res =
-          await fetch(url)
-
-        if (!res.ok)
-          throw new Error(
-            'Failed to load call logs'
-          )
-
-        const data =
-          await res.json()
-
-        const safeData: CallLog[] =
-          Array.isArray(data)
-            ? data
-            : []
-
-        setCallLogs(safeData)
-
-        const reminders =
-          safeData.filter(
-            (log) =>
-              log.interestStatus ===
-                'Interested' &&
-              log.reminderDays != null
-          )
-
-        setReminderCalls(
-          reminders
-        )
-      } catch (err) {
-        console.error(
-          'CallLogs load failed:',
-          err
-        )
-        setCallLogs([])
-        setReminderCalls([])
+      if (user?.role === 'staff') {
+        url = `/api/call-logs?staffId=${user.id}`
       }
-    }, [user])
 
+      const res = await fetch(url)
+
+      if (!res.ok)
+        throw new Error('Failed to load call logs')
+
+      const data = await res.json()
+
+      const safeData: CallLog[] =
+        Array.isArray(data) ? data : []
+
+      setCallLogs(safeData)
+
+      const reminders = safeData.filter(
+        (log) =>
+          log.interestStatus === 'Interested' &&
+          log.reminderDays != null
+      )
+
+      setReminderCalls(reminders)
+    } catch (err) {
+      console.error('CallLogs load failed:', err)
+      setCallLogs([])
+      setReminderCalls([])
+    }
+  }, [user])
+
+  /* Initial Load */
   useEffect(() => {
     if (user) {
       refreshCallLogs()
@@ -158,87 +129,86 @@ export function DataProvider({
   }, [user, refreshCallLogs])
 
   /* =========================
+     AUTO REFRESH (LIVE SYNC)
+     Refresh every 10 seconds
+  ========================= */
+
+  useEffect(() => {
+    if (!user) return
+
+    const interval = setInterval(() => {
+      refreshCallLogs()
+    }, 10000) // 10 seconds
+
+    return () => clearInterval(interval)
+  }, [user, refreshCallLogs])
+
+  /* =========================
      ADD CALL LOG
   ========================= */
 
-  const addCallLog =
-    async (data: {
-      clientId: number
-      staffId: number
-      callRegarding: string
-      status: string
-      interestStatus: string
-      reminderDays?: number | null
-      response?: string | null
-    }) => {
-      try {
-        const res =
-          await fetch(
-            '/api/call-logs',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type':
-                  'application/json',
-              },
-              body: JSON.stringify(
-                data
-              ),
-            }
-          )
+  const addCallLog = async (data: {
+    clientId: number
+    staffId: number
+    callRegarding: string
+    status: string
+    interestStatus: string
+    reminderDays?: number | null
+    response?: string | null
+  }) => {
+    try {
+      const res = await fetch('/api/call-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
 
-        if (!res.ok)
-          throw new Error(
-            'Failed to add call log'
-          )
+      if (!res.ok)
+        throw new Error('Failed to add call log')
 
-        await refreshCallLogs()
-      } catch (err) {
-        console.error(
-          'Add CallLog failed:',
-          err
-        )
-      }
+      await refreshCallLogs()
+    } catch (err) {
+      console.error('Add CallLog failed:', err)
     }
+  }
 
   /* =========================
      REASSIGN REMINDER
   ========================= */
 
-  const reassignReminder =
-    async (
-      logId: number,
-      staffId: number
-    ) => {
-      try {
-        const res =
-          await fetch(
-            `/api/call-logs/${logId}/reassign`,
-            {
-              method: 'PATCH',
-              headers: {
-                'Content-Type':
-                  'application/json',
-              },
-              body: JSON.stringify({
-                staffId,
-              }),
-            }
-          )
+  const reassignReminder = async (
+    logId: number,
+    staffId: number
+  ) => {
+    try {
+      const res = await fetch(
+        `/api/call-logs/${logId}/reassign`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            staffId,
+          }),
+        }
+      )
 
-        if (!res.ok)
-          throw new Error(
-            'Failed to reassign reminder'
-          )
-
-        await refreshCallLogs()
-      } catch (err) {
-        console.error(
-          'Reassign reminder failed:',
-          err
+      if (!res.ok)
+        throw new Error(
+          'Failed to reassign reminder'
         )
-      }
+
+      await refreshCallLogs()
+    } catch (err) {
+      console.error(
+        'Reassign reminder failed:',
+        err
+      )
     }
+  }
 
   /* =========================
      SEARCH CLIENTS
@@ -247,11 +217,9 @@ export function DataProvider({
   const searchClients = (
     query: string
   ): Client[] => {
-    if (!query.trim())
-      return []
+    if (!query.trim()) return []
 
-    const q =
-      query.toLowerCase()
+    const q = query.toLowerCase()
 
     return clients.filter(
       (client) =>
@@ -261,9 +229,7 @@ export function DataProvider({
         client.clientName
           .toLowerCase()
           .includes(q) ||
-        client.phoneNumber.includes(
-          q
-        )
+        client.phoneNumber.includes(q)
     )
   }
 
@@ -293,8 +259,7 @@ export function DataProvider({
 ========================= */
 
 export function useData() {
-  const context =
-    useContext(DataContext)
+  const context = useContext(DataContext)
 
   if (!context) {
     throw new Error(

@@ -22,7 +22,7 @@ export default function AdminDashboard() {
   const { toast } = useToast()
 
   /* =========================
-     CALL STATS
+     CALL STATS (ALL TIME)
   ========================= */
   const totalCalls = callLogs.length
 
@@ -42,10 +42,18 @@ export default function AdminDashboard() {
       : 0
 
   /* =========================
-     ACTIVE STAFF (STRICT RELATIONAL)
+     ACTIVE STAFF TODAY
   ========================= */
+  const today = new Date().toDateString()
+
   const activeStaff = new Set(
-    callLogs.map((log) => log.staffId)
+    callLogs
+      .filter(
+        (log) =>
+          new Date(log.dateTime).toDateString() ===
+          today
+      )
+      .map((log) => log.staffId)
   ).size
 
   /* =========================
@@ -71,7 +79,7 @@ export default function AdminDashboard() {
     }).length
 
   /* =========================
-     EXPORT CSV (STRICT RELATIONAL)
+     EXPORT CSV
   ========================= */
   const handleExport = () => {
     const headers = [
@@ -180,7 +188,7 @@ export default function AdminDashboard() {
           />
 
           <StatsCard
-            title="Active Staff"
+            title="Active Staff Today"
             value={activeStaff}
             icon={Users}
             variant="accent"
@@ -204,7 +212,7 @@ export default function AdminDashboard() {
           />
         </div>
 
-        {/* ================= CHARTS ================= */}
+        {/* ================= CHART ================= */}
         <CallChart />
 
         {/* ================= RECENT CALLS ================= */}
