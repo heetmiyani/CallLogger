@@ -9,7 +9,6 @@ export default async function handler(req, res) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // ✅ Correct model name
     const calls = await prisma.callLog.findMany({
       where: {
         createdAt: {
@@ -43,6 +42,13 @@ export default async function handler(req, res) {
       { header: "Created At", key: "createdAt", width: 25 },
     ];
 
+    // ✅ Format date + time properly
+    worksheet.getColumn("dateTime").numFmt = "yyyy-mm-dd hh:mm:ss";
+    worksheet.getColumn("createdAt").numFmt = "yyyy-mm-dd hh:mm:ss";
+
+    // ✅ Make header bold
+    worksheet.getRow(1).font = { bold: true };
+
     calls.forEach((call) => {
       worksheet.addRow({
         staffName: call.staff.name,
@@ -54,10 +60,17 @@ export default async function handler(req, res) {
         interestStatus: call.interestStatus,
         reminderDays: call.reminderDays || "",
         response: call.response || "",
-        dateTime: call.dateTime,
-        createdAt: call.createdAt,
+        // ✅ Convert UTC to IST
+        dateTime: new Date(call.dateTime.getTime() + 5.5 * 60 * 60 * 1000),
+        createdAt: new Date(call.createdAt.getTime() + 5.5 * 60 * 60 * 1000),
       });
     });
+
+    // ✅ Enable Auto Filter
+    worksheet.autoFilter = {
+      from: "A1",
+      to: "K1",
+    };
 
     const buffer = await workbook.xlsx.writeBuffer();
 
@@ -88,7 +101,7 @@ export default async function handler(req, res) {
 
     const admins = await prisma.staff.findMany({
       where: {
-        role: "admin",   // must match your DB value exactly
+        role: "admin",
       },
       select: {
         email: true,
