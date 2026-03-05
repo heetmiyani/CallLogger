@@ -16,21 +16,77 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { getReminderPhase } from '@/lib/reminderUtils'
 import { format } from 'date-fns'
+import { useState } from 'react'
 
 export default function AdminDashboard() {
   const { callLogs, reminderCalls } = useData()
   const { toast } = useToast()
 
   /* =========================
-     CALL STATS (ALL TIME)
+     FILTER STATE
   ========================= */
-  const totalCalls = callLogs.length
 
-  const answeredCalls = callLogs.filter(
+  const [filter, setFilter] = useState<
+    'today' | '7days' | '30days' | 'month' | 'overall' | 'custom'
+  >('today')
+
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+
+  const now = new Date()
+
+  /* =========================
+     FILTERED LOGS
+  ========================= */
+
+  const filteredLogs = callLogs.filter((log) => {
+    const logDate = new Date(log.dateTime)
+
+    if (filter === 'today') {
+      return logDate.toDateString() === now.toDateString()
+    }
+
+    if (filter === '7days') {
+      const past = new Date()
+      past.setDate(now.getDate() - 7)
+      return logDate >= past
+    }
+
+    if (filter === '30days') {
+      const past = new Date()
+      past.setDate(now.getDate() - 30)
+      return logDate >= past
+    }
+
+    if (filter === 'month') {
+      return (
+        logDate.getMonth() === now.getMonth() &&
+        logDate.getFullYear() === now.getFullYear()
+      )
+    }
+
+    if (filter === 'custom' && customStart && customEnd) {
+      const start = new Date(customStart)
+      const end = new Date(customEnd)
+      end.setHours(23, 59, 59, 999)
+
+      return logDate >= start && logDate <= end
+    }
+
+    return true
+  })
+
+  /* =========================
+     CALL STATS
+  ========================= */
+
+  const totalCalls = filteredLogs.length
+
+  const answeredCalls = filteredLogs.filter(
     (log) => log.status === 'Answered'
   ).length
 
-  const notAnsweredCalls = callLogs.filter(
+  const notAnsweredCalls = filteredLogs.filter(
     (log) => log.status === 'Not Answered'
   ).length
 
@@ -42,23 +98,17 @@ export default function AdminDashboard() {
       : 0
 
   /* =========================
-     ACTIVE STAFF TODAY
+     ACTIVE STAFF
   ========================= */
-  const today = new Date().toDateString()
 
   const activeStaff = new Set(
-    callLogs
-      .filter(
-        (log) =>
-          new Date(log.dateTime).toDateString() ===
-          today
-      )
-      .map((log) => log.staffId)
+    filteredLogs.map((log) => log.staffId)
   ).size
 
   /* =========================
      REMINDER STATS
   ========================= */
+
   const activeReminders = reminderCalls.filter(
     (log) => {
       const phase = getReminderPhase(log)
@@ -81,6 +131,7 @@ export default function AdminDashboard() {
   /* =========================
      EXPORT CSV
   ========================= */
+
   const handleExport = () => {
     const headers = [
       'Client Code',
@@ -143,7 +194,9 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
+
         {/* ================= HEADER ================= */}
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold">
@@ -163,7 +216,86 @@ export default function AdminDashboard() {
           </Button>
         </div>
 
+        {/* ================= FILTERS ================= */}
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={filter === 'today' ? 'default' : 'outline'}
+            onClick={() => setFilter('today')}
+          >
+            Today
+          </Button>
+
+          <Button
+            size="sm"
+            variant={filter === '7days' ? 'default' : 'outline'}
+            onClick={() => setFilter('7days')}
+          >
+            Last 7 Days
+          </Button>
+
+          <Button
+            size="sm"
+            variant={filter === '30days' ? 'default' : 'outline'}
+            onClick={() => setFilter('30days')}
+          >
+            Last 30 Days
+          </Button>
+
+          <Button
+            size="sm"
+            variant={filter === 'month' ? 'default' : 'outline'}
+            onClick={() => setFilter('month')}
+          >
+            This Month
+          </Button>
+
+          <Button
+            size="sm"
+            variant={filter === 'overall' ? 'default' : 'outline'}
+            onClick={() => setFilter('overall')}
+          >
+            Overall
+          </Button>
+
+          <Button
+            size="sm"
+            variant={filter === 'custom' ? 'default' : 'outline'}
+            onClick={() => setFilter('custom')}
+          >
+            Custom Range
+          </Button>
+        </div>
+
+        {/* ================= CUSTOM RANGE ================= */}
+
+        {filter === 'custom' && (
+          <div className="flex gap-3 items-center">
+            <input
+              type="date"
+              value={customStart}
+              onChange={(e) =>
+                setCustomStart(e.target.value)
+              }
+              className="border rounded px-3 py-1"
+            />
+
+            <span>to</span>
+
+            <input
+              type="date"
+              value={customEnd}
+              onChange={(e) =>
+                setCustomEnd(e.target.value)
+              }
+              className="border rounded px-3 py-1"
+            />
+          </div>
+        )}
+
         {/* ================= STATS ================= */}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
             title="Total Calls"
@@ -188,7 +320,7 @@ export default function AdminDashboard() {
           />
 
           <StatsCard
-            title="Active Staff Today"
+            title="Active Staff"
             value={activeStaff}
             icon={Users}
             variant="accent"
@@ -196,6 +328,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ================= REMINDER STATS ================= */}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatsCard
             title="Active Reminders"
@@ -213,9 +346,11 @@ export default function AdminDashboard() {
         </div>
 
         {/* ================= CHART ================= */}
+
         <CallChart />
 
         {/* ================= RECENT CALLS ================= */}
+
         <RecentCallsTable
           limit={10}
           showStaff
