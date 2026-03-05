@@ -10,9 +10,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Eye } from 'lucide-react'
+import { Eye, Search } from 'lucide-react'
 import { useState } from 'react'
 import { CallLog } from '@/types'
+import { Input } from '@/components/ui/input'
 
 export default function MyLogs() {
   const { user } = useAuth()
@@ -21,15 +22,34 @@ export default function MyLogs() {
   const [selectedLog, setSelectedLog] =
     useState<CallLog | null>(null)
 
+  const [searchQuery, setSearchQuery] =
+    useState('')
+
   // DataContext already filters logs for staff
   const logs =
     user?.role === 'staff'
       ? callLogs
       : []
 
+  /* ================= SEARCH FILTER ================= */
+
+  const filteredLogs = logs.filter((log) => {
+    const q = searchQuery.toLowerCase()
+
+    return (
+      log.client.clientName
+        .toLowerCase()
+        .includes(q) ||
+      log.client.clientCode
+        .toLowerCase()
+        .includes(q)
+    )
+  })
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
+
         {/* Header */}
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
@@ -38,6 +58,19 @@ export default function MyLogs() {
           <p className="text-muted-foreground mt-1">
             View all your call history
           </p>
+        </div>
+
+        {/* Search */}
+        <div className="flex items-center gap-3">
+          <Search className="w-4 h-4 text-muted-foreground" />
+
+          <Input
+            placeholder="Search by client name or client code..."
+            value={searchQuery}
+            onChange={(e) =>
+              setSearchQuery(e.target.value)
+            }
+          />
         </div>
 
         {/* Table */}
@@ -65,7 +98,7 @@ export default function MyLogs() {
               </thead>
 
               <tbody>
-                {logs.map((log) => (
+                {filteredLogs.map((log) => (
                   <tr
                     key={log.id}
                     className="border-b hover:bg-muted/30"
@@ -120,9 +153,9 @@ export default function MyLogs() {
             </table>
           </div>
 
-          {logs.length === 0 && (
+          {filteredLogs.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              You haven't logged any calls yet.
+              No call logs found.
             </div>
           )}
         </div>
