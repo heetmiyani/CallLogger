@@ -21,16 +21,29 @@ import {
   getReminderBadgeVariant,
 } from '@/lib/reminderUtils'
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
 export default function StaffDashboard() {
   const { user } = useAuth()
   const { callLogs } = useData()
 
   const [selectedClient, setSelectedClient] =
     useState<Client | null>(null)
+
   const [isModalOpen, setIsModalOpen] =
     useState(false)
 
-  // DataContext already filters logs for staff
+  const [previewLog, setPreviewLog] =
+    useState<CallLog | null>(null)
+
+  const [previewOpen, setPreviewOpen] =
+    useState(false)
+
   const logs =
     user?.role === 'staff'
       ? callLogs
@@ -56,20 +69,30 @@ export default function StaffDashboard() {
       log.reminderDays !== null
   )
 
+  /* =========================
+     RELOG CLICK
+  ========================= */
+
   const handleReLog = (log: CallLog) => {
+    setPreviewLog(log)
+    setPreviewOpen(true)
+  }
+
+  const openCallModal = () => {
+    if (!previewLog) return
+
     setSelectedClient({
-      id: log.client.id,
-      clientCode: log.client.clientCode,
-      clientName: log.client.clientName,
-      phoneNumber: log.client.phoneNumber,
+      id: previewLog.client.id,
+      clientCode: previewLog.client.clientCode,
+      clientName: previewLog.client.clientName,
+      phoneNumber: previewLog.client.phoneNumber,
     })
 
+    setPreviewOpen(false)
     setIsModalOpen(true)
   }
 
-  const handleSelectClient = (
-    client: Client
-  ) => {
+  const handleSelectClient = (client: Client) => {
     setSelectedClient(client)
     setIsModalOpen(true)
   }
@@ -83,7 +106,7 @@ export default function StaffDashboard() {
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
 
-        {/* Header */}
+        {/* HEADER */}
 
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">
@@ -95,9 +118,7 @@ export default function StaffDashboard() {
           </p>
         </div>
 
-        {/* =========================
-            STATS
-        ========================= */}
+        {/* STATS */}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
@@ -111,8 +132,7 @@ export default function StaffDashboard() {
             title="Answered Today"
             value={
               todayLogs.filter(
-                (l) =>
-                  l.status === 'Answered'
+                (l) => l.status === 'Answered'
               ).length
             }
             icon={TrendingUp}
@@ -123,8 +143,7 @@ export default function StaffDashboard() {
             title="Not Answered"
             value={
               todayLogs.filter(
-                (l) =>
-                  l.status === 'Not Answered'
+                (l) => l.status === 'Not Answered'
               ).length
             }
             icon={PhoneOff}
@@ -133,25 +152,16 @@ export default function StaffDashboard() {
 
         </div>
 
-        {/* =========================
-            CLIENT SEARCH
-        ========================= */}
+        {/* CLIENT SEARCH */}
 
-        <ClientSearch
-          onSelectClient={
-            handleSelectClient
-          }
-        />
+        <ClientSearch onSelectClient={handleSelectClient} />
 
-        {/* =========================
-            REMINDER SECTION
-        ========================= */}
+        {/* REMINDER CALLS */}
 
         <div className="bg-card rounded-xl border shadow-card">
 
           <div className="flex items-center gap-2 px-6 py-4 border-b">
             <Bell className="w-5 h-5 text-primary" />
-
             <h2 className="text-lg font-semibold">
               Reminder Calls
             </h2>
@@ -162,7 +172,6 @@ export default function StaffDashboard() {
               No reminder calls available.
             </div>
           ) : (
-
             <div className="divide-y">
 
               {reminderLogs.map((log) => {
@@ -172,10 +181,6 @@ export default function StaffDashboard() {
 
                 const phase =
                   getReminderPhase(log)
-
-                /* =========================
-                   FIXED RELOG LOGIC
-                ========================= */
 
                 const today = new Date()
 
@@ -194,18 +199,13 @@ export default function StaffDashboard() {
                     <div className="space-y-1">
 
                       <p className="font-medium">
-                        {
-                          log.client
-                            .clientName
-                        }
+                        {log.client.clientName}
                       </p>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
 
                         <span>
-                          {
-                            log.callRegarding
-                          }
+                          {log.callRegarding}
                         </span>
 
                         {phase && (
@@ -234,15 +234,8 @@ export default function StaffDashboard() {
 
                     <Button
                       size="sm"
-                      onClick={() =>
-                        handleReLog(log)
-                      }
+                      onClick={() => handleReLog(log)}
                       disabled={!relogAllowed}
-                      className={
-                        !relogAllowed
-                          ? 'opacity-50 cursor-not-allowed'
-                          : ''
-                      }
                     >
                       Re-Log Call
                     </Button>
@@ -253,11 +246,90 @@ export default function StaffDashboard() {
 
             </div>
           )}
+
         </div>
 
-        {/* =========================
-            CALL LOG MODAL
-        ========================= */}
+        {/* PREVIOUS CALL PREVIEW MODAL */}
+
+        <Dialog
+          open={previewOpen}
+          onOpenChange={() =>
+            setPreviewOpen(false)
+          }
+        >
+          <DialogContent>
+
+            <DialogHeader>
+              <DialogTitle>
+                Previous Call Details
+              </DialogTitle>
+            </DialogHeader>
+
+            {previewLog && (
+
+              <div className="space-y-4">
+
+                <p>
+                  <b>Client:</b>{' '}
+                  {previewLog.client.clientName}
+                </p>
+
+                <p>
+                  <b>Category:</b>{' '}
+                  {previewLog.callRegarding}
+                </p>
+
+                <p>
+                  <b>Status:</b>{' '}
+                  {previewLog.status}
+                </p>
+
+                <p>
+                  <b>Interest:</b>{' '}
+                  {previewLog.interestStatus}
+                </p>
+
+                {previewLog.response && (
+                  <p>
+                    <b>Response:</b>{' '}
+                    {previewLog.response}
+                  </p>
+                )}
+
+                <p>
+                  <b>Last Call:</b>{' '}
+                  {format(
+                    new Date(previewLog.dateTime),
+                    'MMM dd, yyyy HH:mm'
+                  )}
+                </p>
+
+                <div className="flex justify-end gap-3 pt-4">
+
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setPreviewOpen(false)
+                    }
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    onClick={openCallModal}
+                  >
+                    Next
+                  </Button>
+
+                </div>
+
+              </div>
+            )}
+
+          </DialogContent>
+        </Dialog>
+
+        {/* CALL LOG MODAL */}
 
         <CallLogModal
           client={selectedClient}
