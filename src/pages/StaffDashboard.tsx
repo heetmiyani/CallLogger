@@ -37,22 +37,9 @@ export default function StaffDashboard() {
       : []
 
   /* =========================
-     HELPER: CHECK IF DATE IS TODAY
-  ========================= */
-  const isToday = (date: string | Date) => {
-    const today = new Date()
-    const givenDate = new Date(date)
-
-    return (
-      today.getFullYear() === givenDate.getFullYear() &&
-      today.getMonth() === givenDate.getMonth() &&
-      today.getDate() === givenDate.getDate()
-    )
-  }
-
-  /* =========================
      TODAY LOGS
   ========================= */
+
   const todayLogs = logs.filter(
     (log) =>
       new Date(log.dateTime).toDateString() ===
@@ -62,6 +49,7 @@ export default function StaffDashboard() {
   /* =========================
      REMINDER LOGS
   ========================= */
+
   const reminderLogs = logs.filter(
     (log) =>
       log.interestStatus === 'Interested' &&
@@ -94,11 +82,14 @@ export default function StaffDashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
+
         {/* Header */}
+
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">
             Welcome, {user?.name}!
           </h1>
+
           <p className="text-muted-foreground mt-1">
             Search for clients and manage reminder calls
           </p>
@@ -107,12 +98,15 @@ export default function StaffDashboard() {
         {/* =========================
             STATS
         ========================= */}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
           <StatsCard
             title="Calls Today"
             value={todayLogs.length}
             icon={PhoneCall}
           />
+
           <StatsCard
             title="Answered Today"
             value={
@@ -124,6 +118,7 @@ export default function StaffDashboard() {
             icon={TrendingUp}
             variant="success"
           />
+
           <StatsCard
             title="Not Answered"
             value={
@@ -135,11 +130,13 @@ export default function StaffDashboard() {
             icon={PhoneOff}
             variant="warning"
           />
+
         </div>
 
         {/* =========================
             CLIENT SEARCH
         ========================= */}
+
         <ClientSearch
           onSelectClient={
             handleSelectClient
@@ -149,9 +146,12 @@ export default function StaffDashboard() {
         {/* =========================
             REMINDER SECTION
         ========================= */}
+
         <div className="bg-card rounded-xl border shadow-card">
+
           <div className="flex items-center gap-2 px-6 py-4 border-b">
             <Bell className="w-5 h-5 text-primary" />
+
             <h2 className="text-lg font-semibold">
               Reminder Calls
             </h2>
@@ -162,22 +162,37 @@ export default function StaffDashboard() {
               No reminder calls available.
             </div>
           ) : (
+
             <div className="divide-y">
+
               {reminderLogs.map((log) => {
+
                 const reminderDate =
                   getReminderDate(log)
+
                 const phase =
                   getReminderPhase(log)
 
+                /* =========================
+                   FIXED RELOG LOGIC
+                ========================= */
+
+                const today = new Date()
+
                 const relogAllowed =
-                  isToday(log.dateTime)
+                  reminderDate &&
+                  new Date(today.setHours(0,0,0,0)) >=
+                  new Date(reminderDate.setHours(0,0,0,0))
 
                 return (
+
                   <div
                     key={log.id}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-6 py-4"
                   >
+
                     <div className="space-y-1">
+
                       <p className="font-medium">
                         {
                           log.client
@@ -186,6 +201,7 @@ export default function StaffDashboard() {
                       </p>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
+
                         <span>
                           {
                             log.callRegarding
@@ -201,6 +217,7 @@ export default function StaffDashboard() {
                             {phase}
                           </Badge>
                         )}
+
                       </div>
 
                       {reminderDate && (
@@ -212,6 +229,7 @@ export default function StaffDashboard() {
                           )}
                         </p>
                       )}
+
                     </div>
 
                     <Button
@@ -228,9 +246,11 @@ export default function StaffDashboard() {
                     >
                       Re-Log Call
                     </Button>
+
                   </div>
                 )
               })}
+
             </div>
           )}
         </div>
@@ -238,11 +258,13 @@ export default function StaffDashboard() {
         {/* =========================
             CALL LOG MODAL
         ========================= */}
+
         <CallLogModal
           client={selectedClient}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
         />
+
       </div>
     </DashboardLayout>
   )
