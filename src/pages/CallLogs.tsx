@@ -28,6 +28,7 @@ type CallLogType = {
 };
 
 export default function CallLogs() {
+
   const { toast } = useToast();
 
   const [allLogs, setAllLogs] = useState<CallLogType[]>([]);
@@ -42,8 +43,6 @@ export default function CallLogs() {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
 
-  /* NEW FILTERS */
-
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [interestFilter, setInterestFilter] = useState('all');
@@ -55,21 +54,42 @@ export default function CallLogs() {
     fetch('/api/call-logs')
       .then(res => res.json())
       .then(data => setAllLogs(data))
-      .catch(err =>
-        console.error('Call logs fetch failed:', err)
-      );
+      .catch(err => console.error('Call logs fetch failed:', err));
   }, []);
+
+  /* ================= UNIQUE DROPDOWN VALUES ================= */
+
+  const categories = Array.from(
+    new Set(allLogs.map(log => log.callRegarding))
+  );
+
+  const statuses = Array.from(
+    new Set(allLogs.map(log => log.status))
+  );
+
+  const interests = Array.from(
+    new Set(allLogs.map(log => log.interestStatus))
+  );
+
+  const staffList = Array.from(
+    new Set(
+      allLogs
+        .map(log => log.staff?.name)
+        .filter(Boolean)
+    )
+  );
 
   /* ================= FILTERING ================= */
 
   useEffect(() => {
-    const now = new Date();
 
+    const now = new Date();
     let filtered = [...allLogs];
 
     /* SEARCH */
 
     if (searchQuery) {
+
       const q = searchQuery.toLowerCase();
 
       filtered = filtered.filter(log =>
@@ -81,6 +101,7 @@ export default function CallLogs() {
     /* DATE FILTER */
 
     filtered = filtered.filter(log => {
+
       const logDate = new Date(log.dateTime);
 
       if (filter === 'today') {
@@ -107,6 +128,7 @@ export default function CallLogs() {
       }
 
       if (filter === 'custom' && customStart && customEnd) {
+
         const start = new Date(customStart);
         const end = new Date(customEnd);
         end.setHours(23, 59, 59, 999);
@@ -117,7 +139,7 @@ export default function CallLogs() {
       return true;
     });
 
-    /* CATEGORY FILTER */
+    /* CATEGORY */
 
     if (categoryFilter !== 'all') {
       filtered = filtered.filter(
@@ -125,7 +147,7 @@ export default function CallLogs() {
       );
     }
 
-    /* STATUS FILTER */
+    /* STATUS */
 
     if (statusFilter !== 'all') {
       filtered = filtered.filter(
@@ -133,7 +155,7 @@ export default function CallLogs() {
       );
     }
 
-    /* INTEREST FILTER */
+    /* INTEREST */
 
     if (interestFilter !== 'all') {
       filtered = filtered.filter(
@@ -141,7 +163,7 @@ export default function CallLogs() {
       );
     }
 
-    /* STAFF FILTER */
+    /* STAFF */
 
     if (staffFilter !== 'all') {
       filtered = filtered.filter(
@@ -152,6 +174,7 @@ export default function CallLogs() {
     setLogs(filtered);
 
   }, [
+    allLogs,
     searchQuery,
     filter,
     customStart,
@@ -159,13 +182,28 @@ export default function CallLogs() {
     categoryFilter,
     statusFilter,
     interestFilter,
-    staffFilter,
-    allLogs,
+    staffFilter
   ]);
+
+  /* ================= RESET FILTERS ================= */
+
+  const resetFilters = () => {
+
+    setSearchQuery('');
+    setCategoryFilter('all');
+    setStatusFilter('all');
+    setInterestFilter('all');
+    setStaffFilter('all');
+
+    setFilter('today');
+    setCustomStart('');
+    setCustomEnd('');
+  };
 
   /* ================= EXPORT ================= */
 
   const handleExport = () => {
+
     const headers = [
       'Client Code',
       'Client Name',
@@ -199,17 +237,13 @@ export default function CallLogs() {
       ),
     ].join('\n');
 
-    const blob = new Blob([csvContent], {
-      type: 'text/csv',
-    });
+    const blob = new Blob([csvContent], { type: 'text/csv' });
 
     const url = window.URL.createObjectURL(blob);
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `call_logs_${new Date()
-      .toISOString()
-      .split('T')[0]}.csv`;
+    a.download = `call_logs_${new Date().toISOString().split('T')[0]}.csv`;
 
     a.click();
     window.URL.revokeObjectURL(url);
@@ -220,23 +254,18 @@ export default function CallLogs() {
     });
   };
 
-  /* ================= UNIQUE STAFF ================= */
-
-  const staffList = Array.from(
-    new Set(allLogs.map(log => log.staff?.name).filter(Boolean))
-  );
-
   return (
+
     <DashboardLayout>
+
       <div className="space-y-6">
 
         {/* HEADER */}
 
         <div className="flex justify-between items-center">
+
           <div>
-            <h1 className="text-2xl font-bold">
-              Call Logs
-            </h1>
+            <h1 className="text-2xl font-bold">Call Logs</h1>
             <p className="text-muted-foreground">
               View and manage all call records
             </p>
@@ -246,69 +275,171 @@ export default function CallLogs() {
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
+
         </div>
 
         {/* SEARCH */}
 
         <div className="flex items-center gap-3">
+
           <Search className="w-4 h-4 text-muted-foreground" />
 
           <Input
             placeholder="Search by client name or client code..."
             value={searchQuery}
-            onChange={e =>
-              setSearchQuery(e.target.value)
-            }
+            onChange={e => setSearchQuery(e.target.value)}
           />
+
         </div>
 
         {/* DATE FILTERS */}
 
         <div className="flex flex-wrap gap-2">
+
           <Button size="sm" variant={filter === 'today' ? 'default' : 'outline'} onClick={() => setFilter('today')}>Today</Button>
           <Button size="sm" variant={filter === '7days' ? 'default' : 'outline'} onClick={() => setFilter('7days')}>Last 7 Days</Button>
           <Button size="sm" variant={filter === '30days' ? 'default' : 'outline'} onClick={() => setFilter('30days')}>Last 30 Days</Button>
           <Button size="sm" variant={filter === 'month' ? 'default' : 'outline'} onClick={() => setFilter('month')}>This Month</Button>
           <Button size="sm" variant={filter === 'overall' ? 'default' : 'outline'} onClick={() => setFilter('overall')}>Overall</Button>
           <Button size="sm" variant={filter === 'custom' ? 'default' : 'outline'} onClick={() => setFilter('custom')}>Custom Range</Button>
+
         </div>
 
-        {/* ADVANCED FILTERS */}
+        {/* FILTER DROPDOWNS */}
 
         <div className="flex flex-wrap gap-3">
 
-          <select onChange={e=>setCategoryFilter(e.target.value)} className="border rounded px-3 py-1">
+          <select onChange={e => setCategoryFilter(e.target.value)} className="border rounded px-3 py-1">
             <option value="all">All Categories</option>
-            <option value="Mutual Funds">Mutual Funds</option>
-            <option value="Trading">Trading</option>
+            {categories.map(c => <option key={c}>{c}</option>)}
           </select>
 
-          <select onChange={e=>setStatusFilter(e.target.value)} className="border rounded px-3 py-1">
+          <select onChange={e => setStatusFilter(e.target.value)} className="border rounded px-3 py-1">
             <option value="all">All Status</option>
-            <option value="Answered">Answered</option>
-            <option value="Not Answered">Not Answered</option>
+            {statuses.map(s => <option key={s}>{s}</option>)}
           </select>
 
-          <select onChange={e=>setInterestFilter(e.target.value)} className="border rounded px-3 py-1">
+          <select onChange={e => setInterestFilter(e.target.value)} className="border rounded px-3 py-1">
             <option value="all">All Interest</option>
-            <option value="Interested">Interested</option>
-            <option value="Not Interested">Not Interested</option>
+            {interests.map(i => <option key={i}>{i}</option>)}
           </select>
 
-          <select onChange={e=>setStaffFilter(e.target.value)} className="border rounded px-3 py-1">
+          <select onChange={e => setStaffFilter(e.target.value)} className="border rounded px-3 py-1">
             <option value="all">All Staff</option>
-
-            {staffList.map(staff=>(
-              <option key={staff}>{staff}</option>
-            ))}
-
+            {staffList.map(s => <option key={s}>{s}</option>)}
           </select>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={resetFilters}
+          >
+            Reset Filters
+          </Button>
 
         </div>
 
-        {/* TABLE remains same */}
+        {/* RECORD COUNT */}
+
+        <div className="text-sm text-muted-foreground">
+          Showing <strong>{logs.length}</strong> of <strong>{allLogs.length}</strong> records
+        </div>
+
+        {/* TABLE */}
+
+        <div className="bg-card rounded-xl shadow-card border overflow-hidden">
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full">
+
+              <thead>
+
+                <tr className="bg-muted/50">
+
+                  <th className="px-6 py-4 text-left text-sm">Client</th>
+                  <th className="px-6 py-4 text-left text-sm">Category</th>
+                  <th className="px-6 py-4 text-left text-sm">Status</th>
+                  <th className="px-6 py-4 text-left text-sm">Interest</th>
+                  <th className="px-6 py-4 text-left text-sm">Response</th>
+                  <th className="px-6 py-4 text-left text-sm">Staff</th>
+                  <th className="px-6 py-4 text-left text-sm">Date & Time</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                {logs.map(log => (
+
+                  <tr key={log.id} className="border-b hover:bg-muted/30">
+
+                    <td className="px-6 py-4">
+
+                      <p className="font-medium">
+                        {log.client?.clientName || 'N/A'}
+                      </p>
+
+                      <p className="text-sm text-muted-foreground">
+                        {log.client?.clientCode}
+                      </p>
+
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <Badge variant="secondary">
+                        {log.callRegarding}
+                      </Badge>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <Badge variant="outline">
+                        {log.status}
+                      </Badge>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <Badge variant="secondary">
+                        {log.interestStatus}
+                      </Badge>
+                    </td>
+
+                    <td className="px-6 py-4 text-sm">
+                      {log.response || '-'}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm">
+                      {log.staff?.name || 'N/A'}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {format(
+                        new Date(log.dateTime),
+                        'MMM dd, yyyy HH:mm'
+                      )}
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+          {logs.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No call logs found.
+            </div>
+          )}
+
+        </div>
 
       </div>
+
     </DashboardLayout>
   );
 }
