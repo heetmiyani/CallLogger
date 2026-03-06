@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useData } from '@/contexts/DataContext';
+import { Button } from '@/components/ui/button';
 
 import {
   BarChart,
@@ -18,6 +19,8 @@ import { User } from '@/types';
 export default function StaffActivity() {
   const { callLogs = [] } = useData();
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
+
+  const [filter, setFilter] = useState('overall');
 
   /* =========================
      LOAD STAFF
@@ -41,11 +44,46 @@ export default function StaffActivity() {
   }, []);
 
   /* =========================
+     DATE FILTER LOGIC
+  ========================= */
+
+  const now = new Date();
+
+  const filteredLogs = callLogs.filter(log => {
+    const logDate = new Date(log.dateTime);
+
+    if (filter === 'today') {
+      return logDate.toDateString() === now.toDateString();
+    }
+
+    if (filter === '7days') {
+      const past = new Date();
+      past.setDate(now.getDate() - 7);
+      return logDate >= past;
+    }
+
+    if (filter === '30days') {
+      const past = new Date();
+      past.setDate(now.getDate() - 30);
+      return logDate >= past;
+    }
+
+    if (filter === 'month') {
+      return (
+        logDate.getMonth() === now.getMonth() &&
+        logDate.getFullYear() === now.getFullYear()
+      );
+    }
+
+    return true;
+  });
+
+  /* =========================
      STAFF STATS
   ========================= */
 
   const staffStats = staffMembers.map(staff => {
-    const staffLogs = callLogs.filter(
+    const staffLogs = filteredLogs.filter(
       log => log.staff?.name === staff.name
     );
 
@@ -87,20 +125,19 @@ export default function StaffActivity() {
   const totalAnswered = staffStats.reduce((sum, s) => sum + s.answered, 0);
   const totalNotAnswered = staffStats.reduce((sum, s) => sum + s.notAnswered, 0);
   const totalMutualFunds = staffStats.reduce((sum, s) => sum + s.mutualFunds, 0);
-  const totalTrading = staffStats.reduce((sum, s) => sum + s.trading, 0);
-
   const overallAnswerRate =
     totalCalls > 0
       ? Math.round((totalAnswered / totalCalls) * 100)
       : 0;
 
-  const topPerformer = staffStats.sort((a, b) => b.total - a.total)[0];
+  const topPerformer = [...staffStats].sort((a, b) => b.total - a.total)[0];
 
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
 
         {/* Header */}
+
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">
             Staff Activity
@@ -111,8 +148,35 @@ export default function StaffActivity() {
         </div>
 
         {/* =========================
+            FILTER BUTTONS
+        ========================= */}
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant={filter === 'today' ? 'default' : 'outline'} onClick={() => setFilter('today')}>
+            Today
+          </Button>
+
+          <Button variant={filter === '7days' ? 'default' : 'outline'} onClick={() => setFilter('7days')}>
+            Last 7 Days
+          </Button>
+
+          <Button variant={filter === '30days' ? 'default' : 'outline'} onClick={() => setFilter('30days')}>
+            Last 30 Days
+          </Button>
+
+          <Button variant={filter === 'month' ? 'default' : 'outline'} onClick={() => setFilter('month')}>
+            This Month
+          </Button>
+
+          <Button variant={filter === 'overall' ? 'default' : 'outline'} onClick={() => setFilter('overall')}>
+            Overall
+          </Button>
+        </div>
+
+        {/* =========================
             OVERALL SUMMARY
         ========================= */}
+
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <SummaryCard label="Total Calls" value={totalCalls} />
           <SummaryCard label="Answered" value={totalAnswered} />
@@ -122,6 +186,7 @@ export default function StaffActivity() {
         </div>
 
         {/* Top Performer */}
+
         {topPerformer && (
           <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
             <p className="font-semibold">
@@ -136,6 +201,7 @@ export default function StaffActivity() {
         {/* =========================
             STAFF CARDS
         ========================= */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {staffStats.map(staff => (
             <div
@@ -165,8 +231,9 @@ export default function StaffActivity() {
         </div>
 
         {/* =========================
-            COMPARISON CHART
+            CHART
         ========================= */}
+
         <div className="bg-card rounded-xl p-6 shadow-card border border-border/50">
           <h3 className="text-lg font-semibold mb-6">
             Staff Performance Comparison
@@ -191,10 +258,6 @@ export default function StaffActivity() {
     </DashboardLayout>
   );
 }
-
-/* =========================
-   SMALL SUMMARY CARD COMPONENT
-========================= */
 
 function SummaryCard({ label, value }: { label: string; value: string | number }) {
   return (
