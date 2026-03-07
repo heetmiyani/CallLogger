@@ -6,15 +6,19 @@ import StatsCard from '@/components/dashboard/StatsCard'
 import { Client, CallLog } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import { useData } from '@/contexts/DataContext'
+import { useToast } from '@/hooks/use-toast'
+
 import {
   PhoneCall,
   PhoneOff,
   TrendingUp,
   Bell,
 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
+
 import {
   getReminderPhase,
   getReminderDate,
@@ -29,8 +33,10 @@ import {
 } from '@/components/ui/dialog'
 
 export default function StaffDashboard() {
+
   const { user } = useAuth()
   const { callLogs } = useData()
+  const { toast } = useToast()
 
   const [selectedClient, setSelectedClient] =
     useState<Client | null>(null)
@@ -43,6 +49,12 @@ export default function StaffDashboard() {
 
   const [previewOpen, setPreviewOpen] =
     useState(false)
+
+  const [completedReminders, setCompletedReminders] =
+    useState<number[]>([])
+
+  const [activeReminderId, setActiveReminderId] =
+    useState<number | null>(null)
 
   const logs =
     user?.role === 'staff'
@@ -66,7 +78,8 @@ export default function StaffDashboard() {
   const reminderLogs = logs.filter(
     (log) =>
       log.interestStatus === 'Interested' &&
-      log.reminderDays !== null
+      log.reminderDays !== null &&
+      !completedReminders.includes(log.id)
   )
 
   /* =========================
@@ -79,7 +92,10 @@ export default function StaffDashboard() {
   }
 
   const openCallModal = () => {
+
     if (!previewLog) return
+
+    setActiveReminderId(previewLog.id)
 
     setSelectedClient({
       id: previewLog.client.id,
@@ -92,18 +108,44 @@ export default function StaffDashboard() {
     setIsModalOpen(true)
   }
 
+  /* =========================
+     CLIENT SEARCH
+  ========================= */
+
   const handleSelectClient = (client: Client) => {
     setSelectedClient(client)
     setIsModalOpen(true)
   }
 
+  /* =========================
+     MODAL CLOSE (AFTER SAVE)
+  ========================= */
+
   const handleCloseModal = () => {
+
     setIsModalOpen(false)
     setSelectedClient(null)
+
+    if (activeReminderId) {
+
+      setCompletedReminders((prev) => [
+        ...prev,
+        activeReminderId
+      ])
+
+      toast({
+        title: "Reminder Completed",
+        description: "Call logged successfully",
+      })
+
+      setActiveReminderId(null)
+    }
   }
 
   return (
+
     <DashboardLayout>
+
       <div className="space-y-8 animate-fade-in">
 
         {/* HEADER */}
@@ -168,10 +210,13 @@ export default function StaffDashboard() {
           </div>
 
           {reminderLogs.length === 0 ? (
+
             <div className="p-6 text-center text-muted-foreground">
               No reminder calls available.
             </div>
+
           ) : (
+
             <div className="divide-y">
 
               {reminderLogs.map((log) => {
@@ -241,6 +286,7 @@ export default function StaffDashboard() {
                     </Button>
 
                   </div>
+
                 )
               })}
 
@@ -257,6 +303,7 @@ export default function StaffDashboard() {
             setPreviewOpen(false)
           }
         >
+
           <DialogContent>
 
             <DialogHeader>
@@ -324,9 +371,11 @@ export default function StaffDashboard() {
                 </div>
 
               </div>
+
             )}
 
           </DialogContent>
+
         </Dialog>
 
         {/* CALL LOG MODAL */}
@@ -338,6 +387,7 @@ export default function StaffDashboard() {
         />
 
       </div>
+
     </DashboardLayout>
   )
 }
