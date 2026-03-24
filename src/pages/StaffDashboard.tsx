@@ -50,12 +50,6 @@ export default function StaffDashboard() {
   const [previewOpen, setPreviewOpen] =
     useState(false)
 
-  const [completedReminders, setCompletedReminders] =
-    useState<number[]>([])
-
-  const [activeReminderId, setActiveReminderId] =
-    useState<number | null>(null)
-
   const logs =
     user?.role === 'staff'
       ? callLogs
@@ -72,15 +66,28 @@ export default function StaffDashboard() {
   )
 
   /* =========================
-     REMINDER LOGS
+     REMINDER LOGS (FIXED)
   ========================= */
 
-  const reminderLogs = logs.filter(
-    (log) =>
-      log.interestStatus === 'Interested' &&
-      log.reminderDays !== null &&
-      !completedReminders.includes(log.id)
-  )
+  const reminderLogs = logs.filter((log) => {
+
+    if (
+      log.interestStatus !== 'Interested' ||
+      log.reminderDays === null
+    ) return false
+
+    const reminderDate = getReminderDate(log)
+    if (!reminderDate) return false
+
+    // ✅ IMPORTANT LOGIC
+    // hide if newer call exists AFTER this call
+    const hasNewerCall = logs.some((l) =>
+      l.client.id === log.client.id &&
+      new Date(l.dateTime) > new Date(log.dateTime)
+    )
+
+    return !hasNewerCall
+  })
 
   /* =========================
      RELOG CLICK
@@ -94,9 +101,6 @@ export default function StaffDashboard() {
   const openCallModal = () => {
 
     if (!previewLog) return
-
-    setActiveReminderId(previewLog.id)
-
     setSelectedClient({
       id: previewLog.client.id,
       clientCode: previewLog.client.clientCode,
@@ -118,7 +122,7 @@ export default function StaffDashboard() {
   }
 
   /* =========================
-     MODAL CLOSE (AFTER SAVE)
+     MODAL CLOSE
   ========================= */
 
   const handleCloseModal = () => {
@@ -126,22 +130,11 @@ export default function StaffDashboard() {
     setIsModalOpen(false)
     setSelectedClient(null)
 
-    if (activeReminderId) {
-
-      setCompletedReminders((prev) => [
-        ...prev,
-        activeReminderId
-      ])
-
-      toast({
-        title: "Reminder Completed",
-        description: "Call logged successfully",
-      })
-
-      setActiveReminderId(null)
-    }
+    toast({
+      title: "Call Logged",
+      description: "Reminder automatically updated",
+    })
   }
-
   return (
 
     <DashboardLayout>
@@ -295,7 +288,7 @@ export default function StaffDashboard() {
 
         </div>
 
-        {/* PREVIOUS CALL PREVIEW MODAL */}
+        {/* PREVIEW MODAL */}
 
         <Dialog
           open={previewOpen}
@@ -316,31 +309,13 @@ export default function StaffDashboard() {
 
               <div className="space-y-4">
 
-                <p>
-                  <b>Client:</b>{' '}
-                  {previewLog.client.clientName}
-                </p>
-
-                <p>
-                  <b>Category:</b>{' '}
-                  {previewLog.callRegarding}
-                </p>
-
-                <p>
-                  <b>Status:</b>{' '}
-                  {previewLog.status}
-                </p>
-
-                <p>
-                  <b>Interest:</b>{' '}
-                  {previewLog.interestStatus}
-                </p>
+                <p><b>Client:</b> {previewLog.client.clientName}</p>
+                <p><b>Category:</b> {previewLog.callRegarding}</p>
+                <p><b>Status:</b> {previewLog.status}</p>
+                <p><b>Interest:</b> {previewLog.interestStatus}</p>
 
                 {previewLog.response && (
-                  <p>
-                    <b>Response:</b>{' '}
-                    {previewLog.response}
-                  </p>
+                  <p><b>Response:</b> {previewLog.response}</p>
                 )}
 
                 <p>
@@ -362,9 +337,7 @@ export default function StaffDashboard() {
                     Cancel
                   </Button>
 
-                  <Button
-                    onClick={openCallModal}
-                  >
+                  <Button onClick={openCallModal}>
                     Next
                   </Button>
 
