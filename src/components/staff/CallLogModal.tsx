@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Client } from '@/types';
+import { Client, CallLog } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext'; // ✅ IMPORTANT
 import { useToast } from '@/hooks/use-toast';
@@ -26,23 +26,56 @@ interface CallLogModalProps {
   client: Client | null;
   isOpen: boolean;
   onClose: () => void;
+  previousLog?: CallLog | null;
 }
 
 export default function CallLogModal({
   client,
   isOpen,
   onClose,
+  previousLog,
 }: CallLogModalProps) {
-  const [callRegarding, setCallRegarding] = useState<string>();
-  const [status, setStatus] = useState<string>();
-  const [interestStatus, setInterestStatus] = useState<string>();
-  const [reminderDays, setReminderDays] = useState<number>();
-  const [response, setResponse] = useState('');
+  const [callRegarding, setCallRegarding] = useState<string>(
+    previousLog?.callRegarding || ''
+  );
+  const [status, setStatus] = useState<string>(
+    previousLog?.status || ''
+  );
+  
+  const [interestStatus, setInterestStatus] = useState<string>(
+    previousLog?.interestStatus || ''
+  );
+  
+  const [reminderDays, setReminderDays] = useState<number | undefined>(
+    previousLog?.reminderDays ?? undefined
+  );
+  
+  const [response, setResponse] = useState(
+    previousLog?.response || ''
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { user } = useAuth();
   const { addCallLog } = useData(); // ✅ USE CONTEXT
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (previousLog) {
+      setCallRegarding(previousLog.callRegarding);
+      setStatus(previousLog.status);
+      setInterestStatus(previousLog.interestStatus);
+      setReminderDays(
+        previousLog.reminderDays ?? undefined
+      );
+      setResponse(previousLog.response || '');
+    } else {
+      setCallRegarding('');
+      setStatus('');
+      setInterestStatus('');
+      setReminderDays(undefined);
+      setResponse('');
+    }
+  }, [previousLog, isOpen]);
 
   if (!client || !user) return null;
 

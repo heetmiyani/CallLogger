@@ -128,11 +128,6 @@ export default function StaffDashboard() {
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedClient(null)
-
-    toast({
-      title: "Call Logged",
-      description: "Reminder automatically updated",
-    })
   }
   return (
 
@@ -356,6 +351,7 @@ export default function StaffDashboard() {
           client={selectedClient}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
+          previousLog={previewLog}
         />
 
       </div>
