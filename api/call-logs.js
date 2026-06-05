@@ -66,7 +66,7 @@ export default async function handler(req, res) {
         response,
       } = req.body
 
-      // Required validation (do NOT use !clientId because 0 is falsy)
+      // Required validation
       if (
         clientId === undefined ||
         staffId === undefined ||
@@ -101,10 +101,30 @@ export default async function handler(req, res) {
       ) {
         const parsedReminder = Number(reminderDays)
 
-        if (Number.isInteger(parsedReminder) && parsedReminder > 0) {
+        if (
+          Number.isInteger(parsedReminder) &&
+          parsedReminder > 0
+        ) {
           finalReminderDays = parsedReminder
         }
       }
+
+      /*
+       * Clear any existing reminder entries for this client.
+       * This ensures that once a reminder is re-logged,
+       * the old reminder disappears from Reminder Calls.
+       */
+      await prisma.callLog.updateMany({
+        where: {
+          clientId: parsedClientId,
+          reminderDays: {
+            not: null,
+          },
+        },
+        data: {
+          reminderDays: null,
+        },
+      })
 
       const newLog = await prisma.callLog.create({
         data: {
@@ -126,7 +146,9 @@ export default async function handler(req, res) {
       return res.status(201).json(newLog)
     }
 
-    /* ========================= */
+    /* =========================
+       UNSUPPORTED METHOD
+    ========================= */
 
     return res.status(405).json({
       error: 'Method not allowed',

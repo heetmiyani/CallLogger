@@ -126,7 +126,6 @@ export default function StaffDashboard() {
   ========================= */
 
   const handleCloseModal = () => {
-
     setIsModalOpen(false)
     setSelectedClient(null)
 
