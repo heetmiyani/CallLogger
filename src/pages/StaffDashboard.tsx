@@ -75,17 +75,29 @@ export default function StaffDashboard() {
       log.interestStatus !== 'Interested' ||
       log.reminderDays === null
     ) return false
-
+  
     const reminderDate = getReminderDate(log)
+  
     if (!reminderDate) return false
-
-    // ✅ IMPORTANT LOGIC
-    // hide if newer call exists AFTER this call
-    const hasNewerCall = logs.some((l) =>
-      l.client.id === log.client.id &&
-      new Date(l.dateTime) > new Date(log.dateTime)
+  
+    // Only show when reminder date has arrived
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+  
+    const dueDate = new Date(reminderDate)
+    dueDate.setHours(0, 0, 0, 0)
+  
+    if (today < dueDate) {
+      return false
+    }
+  
+    const hasNewerCall = logs.some(
+      (l) =>
+        l.client.id === log.client.id &&
+        new Date(l.dateTime) >
+          new Date(log.dateTime)
     )
-
+  
     return !hasNewerCall
   })
 
