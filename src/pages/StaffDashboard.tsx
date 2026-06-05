@@ -50,9 +50,6 @@ export default function StaffDashboard() {
   const [previewOpen, setPreviewOpen] =
     useState(false)
 
-  const [completedReminders, setCompletedReminders] =
-    useState<number[]>([])
-
   const [activeReminderId, setActiveReminderId] =
     useState<number | null>(null)
 
@@ -78,8 +75,7 @@ export default function StaffDashboard() {
   const reminderLogs = logs.filter(
     (log) =>
       log.interestStatus === 'Interested' &&
-      log.reminderDays !== null &&
-      !completedReminders.includes(log.id)
+      log.reminderDays !== null
   )
 
   /* =========================
@@ -125,19 +121,14 @@ export default function StaffDashboard() {
 
     setIsModalOpen(false)
     setSelectedClient(null)
-
+  
     if (activeReminderId) {
-
-      setCompletedReminders((prev) => [
-        ...prev,
-        activeReminderId
-      ])
-
+  
       toast({
-        title: "Reminder Completed",
-        description: "Call logged successfully",
+        title: 'Reminder Updated',
+        description: 'Call log saved successfully',
       })
-
+  
       setActiveReminderId(null)
     }
   }
