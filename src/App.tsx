@@ -23,6 +23,7 @@ import ManageUsers from './pages/ManageUsers';
 import AdminReminderCalls from './pages/AdminReminderCalls';
 import StaffChangeRequest from './pages/StaffChangeRequest';
 import AdminManageData from './pages/AdminManageData';
+import ManageClients from './pages/admin/ManageClients';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -99,6 +100,15 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <AdminManageData />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/manage-clients"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <ManageClients />
                   </ProtectedRoute>
                 }
               />

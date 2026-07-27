@@ -12,6 +12,7 @@ import {
   UserCog,
   BellRing,
   FileEdit,
+  Building,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -90,6 +91,11 @@ export default function DashboardLayout({
             icon: UserCog,
             label: 'Manage Users',
             path: '/manage-users',
+          },
+          {
+            icon: Building,
+            label: 'Manage Clients',
+            path: '/admin/manage-clients',
           },
           {
             icon: FileEdit,
